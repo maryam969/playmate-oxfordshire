@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 
 const stats = [
@@ -62,7 +63,9 @@ export default function Home() {
       <header className="sticky top-0 z-30 h-16 bg-white border-b border-[#F0F0F0] px-12">
         <div className="flex h-full items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">⚽</span>
+            <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-100">
+              <Image src="/logo.png" alt="PlayMate logo" fill className="object-cover" />
+            </div>
             <div>
               <p className="text-base font-black text-[#0a1628]">PlayMate</p>
               <p className="text-xs text-[#6B7280]">Oxfordshire</p>
@@ -95,21 +98,16 @@ export default function Home() {
         />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-16 px-6 lg:flex-row lg:items-center lg:gap-24">
           <div className="lg:w-[55%]">
-            <span className="inline-flex rounded-full bg-[#ECFBF4] px-4 py-2 text-sm font-semibold text-[#047857]">
-              🏟️ Oxford's #1 Sports Platform
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#ECFBF4] px-4 py-2 text-sm font-semibold text-[#047857]">
+              <div className="relative h-5 w-5 overflow-hidden rounded-full bg-white">
+                <Image src="/logo.png" alt="PlayMate logo" fill className="object-cover" />
+              </div>
+              Oxford's #1 Sports Platform
             </span>
             <h1 className="mt-10 text-[52px] font-black leading-[1.05] text-[#0a1628] sm:text-[72px]">
               <span className="block">Find Players.</span>
               <span className="relative block">
                 <span className="text-[#1D9E75]">Book Venues.</span>
-                <svg
-                  className="absolute left-0 top-full mt-2 h-6 w-full"
-                  viewBox="0 0 200 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M0 10 C40 0, 60 20, 100 10 C140 0, 160 20, 200 10" stroke="#1D9E75" strokeWidth="3" fill="transparent" />
-                </svg>
               </span>
               <span className="block">Play Sport.</span>
             </h1>
