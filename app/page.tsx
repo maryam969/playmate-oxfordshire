@@ -139,7 +139,7 @@ export default function Home() {
           </div>
 
           <div className="lg:w-[45%]">
-            <div className="relative mx-auto w-full max-w-lg rotate-1 rounded-2xl bg-white p-6 shadow-2xl shadow-[#D1FAE5]/40">
+            <div className="relative mx-auto w-full max-w-lg md:rotate-1 rounded-2xl bg-white p-6 shadow-2xl shadow-[#D1FAE5]/40">
               <div className="flex items-center justify-between rounded-3xl bg-slate-950 px-4 py-3 text-white">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">⚽</span>
