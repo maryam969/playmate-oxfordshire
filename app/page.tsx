@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { UserCircle, CalendarCheck, Trophy } from 'lucide-react'
 
 const stats = [
   { value: '3,800+', label: 'Active Players' },
@@ -219,19 +220,27 @@ export default function Home() {
           <h2 className="mt-4 text-4xl font-black text-slate-950 sm:text-5xl">As easy as 1, 2, 3</h2>
         </div>
         <div className="mx-auto mt-16 grid max-w-7xl gap-6 px-6 md:grid-cols-3">
-          {steps.map((step, index) => (
-            <div key={step.number} className="rounded-[28px] bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-[#047857]">{step.number}</div>
-                <div className="text-3xl">{step.icon}</div>
+          {steps.map((step, index) => {
+            const iconMap = {
+              '01': UserCircle,
+              '02': CalendarCheck,
+              '03': Trophy,
+            }
+            const IconComponent = iconMap[step.number as keyof typeof iconMap]
+            return (
+              <div key={step.number} className="rounded-[28px] bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-[#047857]">{step.number}</div>
+                  {IconComponent && <IconComponent size={24} color="#1D9E75" />}
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-slate-950">{step.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-500">{step.description}</p>
+                {index < steps.length - 1 && (
+                  <div className="mt-6 flex items-center justify-end text-2xl text-slate-200">→</div>
+                )}
               </div>
-              <h3 className="mt-6 text-xl font-semibold text-slate-950">{step.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-500">{step.description}</p>
-              {index < steps.length - 1 && (
-                <div className="mt-6 flex items-center justify-end text-2xl text-slate-200">→</div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
