@@ -1,0 +1,261 @@
+"use client";
+
+import { ChangeEvent, FormEvent, useRef, useState } from "react";
+
+const sportOptions = [
+  { emoji: "⚽", label: "Football" },
+  { emoji: "🎾", label: "Tennis" },
+  { emoji: "🏀", label: "Basketball" },
+  { emoji: "🏸", label: "Badminton" },
+  { emoji: "🥎", label: "Padel" },
+];
+
+const recentGames = [
+  {
+    emoji: "⚽",
+    title: "Weekend Kickabout",
+    date: "Jun 8, 2026",
+    status: "Upcoming",
+    statusColor: "text-[#0F6E56] bg-[#E1F5EE]",
+  },
+  {
+    emoji: "🎾",
+    title: "Sunday Social",
+    date: "May 28, 2026",
+    status: "Played",
+    statusColor: "text-slate-500 bg-slate-100",
+  },
+  {
+    emoji: "🏸",
+    title: "Evening Doubles",
+    date: "May 22, 2026",
+    status: "Played",
+    statusColor: "text-slate-500 bg-slate-100",
+  },
+];
+
+export default function ProfilePage() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState("Olivia");
+  const [lastName, setLastName] = useState("Lewis");
+  const [email] = useState("olivia.lewis@example.com");
+  const [location, setLocation] = useState("Oxford, Oxfordshire");
+  const [selectedSports, setSelectedSports] = useState<string[]>(["Football", "Tennis"]);
+  const [skillLevel, setSkillLevel] = useState("Intermediate");
+  const [showToast, setShowToast] = useState(false);
+
+  const handlePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setProfileImage(reader.result);
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const toggleSport = (label: string) => {
+    setSelectedSports((current) =>
+      current.includes(label) ? current.filter((item) => item !== label) : [...current, label]
+    );
+  };
+
+  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setShowToast(true);
+    window.setTimeout(() => setShowToast(false), 3000);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)] pt-4 text-[#1a1a1a]">
+      <div className="mx-auto max-w-[480px] space-y-5 pb-6">
+        {showToast ? (
+          <div className="fixed right-4 top-4 z-50 rounded-2xl bg-[#1D9E75] px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-[#1D9E75]/20">
+            ✓ Profile updated successfully
+          </div>
+        ) : null}
+
+        <section className="overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1D9E75] to-[#0F6E56] p-5 text-white shadow-xl shadow-[#0F6E75]/15">
+          <div className="flex items-start gap-4">
+            <button
+              type="button"
+              onClick={handlePictureClick}
+              className="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 text-2xl font-bold text-white shadow-lg shadow-slate-900/10"
+            >
+              {profileImage ? (
+                <img src={profileImage} alt="Olivia Lewis" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                "OL"
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </button>
+            <div className="flex-1">
+              <p className="text-2xl font-semibold">Olivia Lewis</p>
+              <p className="mt-1 text-sm text-white/80">Oxford, Oxfordshire</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+                  ⚽ Football
+                </span>
+                <span className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+                  🎾 Tennis
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <form onSubmit={handleSave} className="space-y-5">
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 text-xs uppercase tracking-[0.2em] text-slate-400">Personal Details</div>
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-2 text-sm font-medium text-slate-700">
+                  First Name
+                  <input
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                  />
+                </label>
+                <label className="space-y-2 text-sm font-medium text-slate-700">
+                  Last Name
+                  <input
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                  />
+                </label>
+              </div>
+              <label className="space-y-2 text-sm font-medium text-slate-700">
+                Email
+                <input
+                  value={email}
+                  readOnly
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 outline-none"
+                />
+              </label>
+              <label className="space-y-2 text-sm font-medium text-slate-700">
+                Location
+                <input
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 text-sm font-semibold text-slate-900">Sports I Play</div>
+            <div className="flex flex-wrap gap-2">
+              {sportOptions.map((sport) => {
+                const active = selectedSports.includes(sport.label);
+                return (
+                  <button
+                    key={sport.label}
+                    type="button"
+                    onClick={() => toggleSport(sport.label)}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition ${
+                      active
+                        ? "bg-[#1D9E75] text-white shadow-sm"
+                        : "border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {active && <span>✓</span>}
+                    <span>{sport.emoji}</span>
+                    <span>{sport.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 text-sm font-semibold text-slate-900">Skill Level</div>
+            <div className="space-y-3">
+              {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
+                const selected = skillLevel === level;
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setSkillLevel(level)}
+                    className={`w-full rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      selected
+                        ? "border-[#1D9E75] bg-[#ECF8F2] text-[#1D9E75]"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    {level}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-3xl bg-[#F8FAFC] p-4 text-center">
+                <div className="text-xl">🎮</div>
+                <p className="mt-3 text-3xl font-semibold text-[#1D9E75]">12</p>
+                <p className="mt-2 text-sm text-slate-500">Games Played</p>
+              </div>
+              <div className="rounded-3xl bg-[#F8FAFC] p-4 text-center">
+                <div className="text-xl">➕</div>
+                <p className="mt-3 text-3xl font-semibold text-[#1D9E75]">3</p>
+                <p className="mt-2 text-sm text-slate-500">Games Created</p>
+              </div>
+              <div className="rounded-3xl bg-[#F8FAFC] p-4 text-center">
+                <div className="text-xl">👥</div>
+                <p className="mt-3 text-3xl font-semibold text-[#1D9E75]">34</p>
+                <p className="mt-2 text-sm text-slate-500">Connections</p>
+              </div>
+            </div>
+          </section>
+
+          <button
+            type="submit"
+            className="w-full rounded-3xl bg-[#1D9E75] px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-[#1D9E75]/20 transition hover:bg-emerald-600"
+          >
+            Save Profile
+          </button>
+        </form>
+
+        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 text-sm font-semibold text-slate-900">Recent Games</div>
+          <div className="space-y-3">
+            {recentGames.map((game) => (
+              <div key={game.title} className="flex items-center justify-between rounded-3xl border border-slate-100 bg-[#FAFBFC] p-4">
+                <div>
+                  <div className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <span>{game.emoji}</span>
+                    {game.title}
+                  </div>
+                  <div className="text-sm text-slate-500">{game.date}</div>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${game.statusColor}`}>
+                  {game.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
