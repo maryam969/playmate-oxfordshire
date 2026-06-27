@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { createSupabaseClient } from "../../lib/supabase";
 
 const statsChips = [
   { label: "12 Games", value: "" },
@@ -32,11 +36,44 @@ const upcomingGames = [
 ];
 
 export default function DashboardPage() {
+  const [name, setName] = useState<string | null>(null);
+  const [loadingName, setLoadingName] = useState(true);
+
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+
+    const loadUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) {
+        setLoadingName(false);
+        return;
+      }
+
+      const metadata = data.user.user_metadata as {
+        full_name?: string;
+        name?: string;
+      } | undefined;
+
+      const profileName = metadata?.full_name ?? metadata?.name ?? null;
+      if (profileName) {
+        setName(profileName);
+      } else if (data.user.email) {
+        setName(data.user.email.split("@")[0]);
+      }
+
+      setLoadingName(false);
+    };
+
+    loadUser();
+  }, []);
+
+  const greeting = loadingName || !name ? "Good morning 👋" : `Good morning, ${name} 👋`;
+
   return (
     <div className="space-y-6 pb-6">
       <section className="rounded-[20px] border border-slate-200 bg-white px-5 py-5 shadow-sm">
         <div className="space-y-2">
-          <p className="text-[22px] font-semibold text-slate-950">Good morning, Olivia 👋</p>
+          <p className="text-[22px] font-semibold text-slate-950">{greeting}</p>
           <p className="text-sm text-slate-500">Ready to play today?</p>
         </div>
       </section>
