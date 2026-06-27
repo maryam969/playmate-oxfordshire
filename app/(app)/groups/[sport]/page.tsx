@@ -1,45 +1,17 @@
 "use client"
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
+import { createSupabaseClient } from "@/lib/supabase";
 
-const chatMessages = [
-  {
-    name: "Ava",
-    initials: "A",
-    time: "9:10 AM",
-    text: "Looking forward to the next session!",
-    avatarBg: "bg-[#FF6B6B]",
-  },
-  {
-    name: "Rio",
-    initials: "R",
-    time: "9:14 AM",
-    text: "Perfect, I’ll bring extra balls and cones.",
-    avatarBg: "bg-[#4ECDC4]",
-  },
-  {
-    name: "You",
-    initials: "Y",
-    time: "9:16 AM",
-    text: "I’m in! Can someone confirm the start time?",
-    isOwn: true,
-  },
-  {
-    name: "Liam",
-    initials: "L",
-    time: "9:17 AM",
-    text: "I’ll be there by 9:50, ready for a good game.",
-    avatarBg: "bg-[#A855F7]",
-  },
-  {
-    name: "You",
-    initials: "Y",
-    time: "9:19 AM",
-    text: "Let’s aim for 10:00 AM and keep the game friendly.",
-    isOwn: true,
-  },
-];
+type ChatMessage = {
+  id: string;
+  sport: string;
+  user_id: string;
+  sender_name: string;
+  content: string;
+  created_at: string;
+};
 
 const games = [
   {
@@ -72,9 +44,80 @@ const sportIcons: Record<string, string> = {
 
 export default function SportGroupPage({ params }: { params: Promise<{ sport: string }> }) {
   const [activeTab, setActiveTab] = useState("chat");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState("");
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
   const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
+
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+
+    const loadMessages = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user) {
+        setCurrentUserId(userData.user.id);
+        const metadata = userData.user.user_metadata as { full_name?: string; name?: string } | undefined;
+        const fullName = metadata?.full_name ?? metadata?.name ?? "You";
+        setCurrentUserName(fullName);
+      }
+
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("sport", sport)
+        .order("created_at", { ascending: true });
+
+      if (!error && data) {
+        setMessages(data as ChatMessage[]);
+      }
+    };
+
+    loadMessages();
+
+    const subscription = supabase
+      .channel("messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `sport=eq.${sport}`,
+        },
+        (payload) => {
+          setMessages((current) => [...current, payload.new as ChatMessage]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [sport]);
+
+  const handleSend = async () => {
+    if (!messageInput.trim() || !currentUserId) {
+      return;
+    }
+
+    setSending(true);
+    const supabase = createSupabaseClient();
+    const { error } = await supabase.from("messages").insert({
+      sport,
+      user_id: currentUserId,
+      sender_name: currentUserName || "You",
+      content: messageInput.trim(),
+    });
+
+    setSending(false);
+    if (!error) {
+      setMessageInput("");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)] pt-4 text-[#1a1a1a]">
@@ -125,35 +168,37 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
         <div className="min-h-[calc(100vh-260px)] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
           {activeTab === "chat" ? (
             <div className="space-y-4">
-              {chatMessages.map((message, index) => {
-                const isStartOfGroup = !message.isOwn && (index === 0 || chatMessages[index - 1].name !== message.name);
-                const isEndOfGroup = !message.isOwn && (index === chatMessages.length - 1 || chatMessages[index + 1].name !== message.name);
-                const avatarBg = message.avatarBg ?? "bg-[#1D9E75]";
+              {messages.map((message, index) => {
+                const isOwn = message.user_id === currentUserId;
+                const isStartOfGroup = !isOwn && (index === 0 || messages[index - 1].user_id !== message.user_id);
+                const isEndOfGroup = !isOwn && (index === messages.length - 1 || messages[index + 1].user_id !== message.user_id);
+                const initials = (message.sender_name || "U").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+                const avatarBg = isOwn ? "bg-[#1D9E75]" : "bg-[#A855F7]";
                 return (
-                  <div key={`${message.name}-${message.time}-${index}`} className={`flex ${message.isOwn ? "justify-end" : "justify-start"}`}>
-                    {message.isOwn ? (
+                  <div key={message.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+                    {isOwn ? (
                       <div className="max-w-[80%] text-right">
                         <div className="inline-block rounded-[18px] bg-[#DCF8C6] px-4 py-3 text-sm">
-                          <p className="text-[#1a1a1a]">{message.text}</p>
-                          <p className="mt-2 text-right text-[11px] text-slate-500">{message.time}</p>
+                          <p className="text-[#1a1a1a]">{message.content}</p>
+                          <p className="mt-2 text-right text-[11px] text-slate-500">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-end gap-2">
                         {isEndOfGroup ? (
                           <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarBg} text-sm font-bold text-white`}>
-                            {message.initials}
+                            {initials}
                           </div>
                         ) : (
                           <div className="h-9 w-9" />
                         )}
                         <div className="max-w-[80%]">
                           {isStartOfGroup ? (
-                            <div className="mb-1 text-[12px] font-semibold text-[#1D9E75]">{message.name}</div>
+                            <div className="mb-1 text-[12px] font-semibold text-[#1D9E75]">{message.sender_name}</div>
                           ) : null}
                           <div className="rounded-[18px] bg-[#F0F2F5] px-4 py-3 text-sm">
-                            <p className="text-[#1a1a1a]">{message.text}</p>
-                            <p className="mt-2 text-right text-[11px] text-slate-500">{message.time}</p>
+                            <p className="text-[#1a1a1a]">{message.content}</p>
+                            <p className="mt-2 text-right text-[11px] text-slate-500">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
                           </div>
                         </div>
                       </div>
@@ -216,11 +261,18 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             <div className="flex flex-1 items-center gap-2 rounded-full bg-[#F0F2F5] px-3 py-2">
               <input
                 type="text"
+                value={messageInput}
+                onChange={(event) => setMessageInput(event.target.value)}
                 placeholder="Message..."
                 className="flex-1 bg-transparent text-sm text-[#1a1a1a] outline-none placeholder:text-slate-400"
               />
-              <button className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#1D9E75] text-lg text-white transition hover:bg-emerald-600">
-                ➤
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sending || !messageInput.trim()}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#1D9E75] text-lg text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {sending ? "…" : "➤"}
               </button>
             </div>
           </div>

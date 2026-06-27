@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createSupabaseClient } from "@/lib/supabase";
 
 const sportOptions = ["Football", "Tennis", "Basketball", "Badminton", "Padel"];
 
@@ -51,11 +52,60 @@ export default function CreateGamePage() {
   const [duration, setDuration] = useState(durationOptions[1]);
   const [players, setPlayers] = useState(8);
   const [selectedVenue, setSelectedVenue] = useState(venues[0].name);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const dateOptions = useMemo(() => getDateOptions(), []);
 
-  const handleSubmit = () => {
-    router.push("/dashboard");
+  const handleSubmit = async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    const supabase = createSupabaseClient();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData.user) {
+      setLoading(false);
+      setErrorMessage("You need to be signed in to create a game.");
+      return;
+    }
+
+    const { data: newGame, error: gameError } = await supabase
+      .from("games")
+      .insert({
+        created_by: userData.user.id,
+        sport,
+        title: `${sport} Game`,
+        date: selectedDate,
+        start_time: startTime,
+        duration,
+        venue: selectedVenue,
+        match_type: matchType,
+        max_players: players,
+        current_players: 1,
+      })
+      .select()
+      .single();
+
+    if (gameError || !newGame) {
+      setLoading(false);
+      setErrorMessage(gameError?.message ?? "Failed to create the game.");
+      return;
+    }
+
+    const { error: playerError } = await supabase.from("game_players").insert({
+      game_id: newGame.id,
+      user_id: userData.user.id,
+    });
+
+    if (playerError) {
+      setLoading(false);
+      setErrorMessage(playerError.message);
+      return;
+    }
+
+    setLoading(false);
+    router.push("/explore");
   };
 
   return (
@@ -270,12 +320,19 @@ export default function CreateGamePage() {
           </div>
         </div>
 
+        {errorMessage ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {errorMessage}
+          </div>
+        ) : null}
+
         <button
           type="button"
           onClick={handleSubmit}
-          className="w-full rounded-3xl bg-[#1D9E75] px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-[#1D9E75]/20 transition hover:bg-emerald-600"
+          disabled={loading}
+          className="w-full rounded-3xl bg-[#1D9E75] px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-[#1D9E75]/20 transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          Post Game
+          {loading ? "Creating game..." : "Post Game"}
         </button>
       </div>
     </div>

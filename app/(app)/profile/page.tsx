@@ -45,6 +45,8 @@ export default function ProfilePage() {
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [skillLevel, setSkillLevel] = useState("");
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("Profile updated successfully");
+  const [toastType, setToastType] = useState<"success" | "error">("success");
 
   useEffect(() => {
     const supabase = createSupabaseClient();
@@ -79,7 +81,7 @@ export default function ProfilePage() {
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("first_name,last_name,location,sports,skill_level")
+        .select("*")
         .eq("id", data.user.id)
         .single();
 
@@ -142,16 +144,22 @@ export default function ProfilePage() {
           location,
           sports: selectedSports,
           skill_level: skillLevel,
+          updated_at: new Date().toISOString(),
         },
         { onConflict: "id" }
       )
       .select();
 
     if (upsertError) {
-      console.error("Failed to save profile:", upsertError.message);
+      setToastType("error");
+      setToastMessage(`Failed to save profile: ${upsertError.message}`);
+      setShowToast(true);
+      window.setTimeout(() => setShowToast(false), 3000);
       return;
     }
 
+    setToastType("success");
+    setToastMessage("Profile updated successfully");
     setShowToast(true);
     window.setTimeout(() => setShowToast(false), 3000);
   };
@@ -160,8 +168,13 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#F0F2F5] px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)] pt-4 text-[#1a1a1a]">
       <div className="mx-auto max-w-[480px] space-y-5 pb-6">
         {showToast ? (
-          <div className="fixed right-4 top-4 z-50 rounded-2xl bg-[#1D9E75] px-5 py-3 text-sm font-semibold text-white shadow-xl shadow-[#1D9E75]/20">
-            ✓ Profile updated successfully
+          <div
+            className={`fixed right-4 top-4 z-50 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-xl ${
+              toastType === "success" ? "bg-[#1D9E75] shadow-[#1D9E75]/20" : "bg-red-600 shadow-red-600/20"
+            }`}
+          >
+            {toastType === "success" ? "✓ " : "! "}
+            {toastMessage}
           </div>
         ) : null}
 
