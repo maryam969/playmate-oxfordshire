@@ -13,26 +13,16 @@ type ChatMessage = {
   created_at: string;
 };
 
-const games = [
-  {
-    title: "Weekend Match",
-    host: "Hosted by Zara",
-    date: "Sat, Jun 8",
-    time: "10:00 AM",
-    venue: "Tilsley Park Abingdon",
-    spotsLeft: 4,
-    status: "Open",
-  },
-  {
-    title: "Evening Practice",
-    host: "Hosted by Milo",
-    date: "Wed, Jun 12",
-    time: "7:15 PM",
-    venue: "Ferry Sports Centre Oxford",
-    spotsLeft: 2,
-    status: "Open",
-  },
-];
+type GameRow = {
+  id: string;
+  sport: string;
+  title: string;
+  date: string;
+  start_time: string;
+  venue: string;
+  current_players: number;
+  max_players: number;
+};
 
 const sportIcons: Record<string, string> = {
   football: "⚽",
@@ -49,6 +39,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserName, setCurrentUserName] = useState("");
+  const [games, setGames] = useState<GameRow[]>([]);
+  const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
+  const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState("");
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
   const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
@@ -76,7 +70,35 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       }
     };
 
+    const loadGames = async () => {
+      const supabase = createSupabaseClient();
+      const { data: userData } = await supabase.auth.getUser();
+
+      if (userData.user) {
+        setCurrentUserId(userData.user.id);
+      }
+
+      const { data: gamesData, error: gamesError } = await supabase
+        .from("games")
+        .select("id, sport, title, date, start_time, venue, current_players, max_players")
+        .ilike("sport", sport);
+
+      if (!gamesError && gamesData) {
+        setGames(gamesData as GameRow[]);
+      }
+
+      if (userData.user) {
+        const { data: joinedData } = await supabase
+          .from("game_players")
+          .select("game_id")
+          .eq("user_id", userData.user.id);
+
+        setJoinedGameIds((joinedData ?? []).map((row) => row.game_id));
+      }
+    };
+
     loadMessages();
+    loadGames();
 
     const subscription = supabase
       .channel("messages")
@@ -117,6 +139,44 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     if (!error) {
       setMessageInput("");
     }
+  };
+
+  const handleJoin = async (game: GameRow) => {
+    if (!currentUserId || joinedGameIds.includes(game.id)) {
+      return;
+    }
+
+    setJoiningGameId(game.id);
+    setJoinError("");
+
+    const supabase = createSupabaseClient();
+    const { error: joinError } = await supabase.from("game_players").insert({
+      game_id: game.id,
+      user_id: currentUserId,
+    });
+
+    if (joinError) {
+      setJoinError(joinError.message);
+      setJoiningGameId(null);
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("games")
+      .update({ current_players: game.current_players + 1 })
+      .eq("id", game.id);
+
+    if (updateError) {
+      setJoinError(updateError.message);
+      setJoiningGameId(null);
+      return;
+    }
+
+    setJoinedGameIds((current) => [...current, game.id]);
+    setGames((current) =>
+      current.map((item) => (item.id === game.id ? { ...item, current_players: item.current_players + 1 } : item))
+    );
+    setJoiningGameId(null);
   };
 
   return (
@@ -209,46 +269,65 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             </div>
           ) : (
             <div className="space-y-4">
-              {games.map((game) => (
-                <div key={game.title} className="rounded-3xl border border-slate-200 bg-[#FBFEFC] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-950">{game.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{game.host}</p>
-                    </div>
-                    <span className="rounded-full bg-[#E7F8EE] px-3 py-1 text-[11px] font-semibold text-[#0F6E56]">
-                      {game.status}
-                    </span>
-                  </div>
-                  <div className="mt-4 grid gap-3 text-sm text-slate-600">
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
-                      <span>📅</span>
-                      <span>{game.date}</span>
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
-                      <span>🕐</span>
-                      <span>{game.time}</span>
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
-                      <span>📍</span>
-                      <span>{game.venue}</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        <span className="h-9 w-9 rounded-full bg-[#D9F5E9]" />
-                        <span className="h-9 w-9 rounded-full bg-[#BBE8D6]" />
-                        <span className="h-9 w-9 rounded-full bg-[#89D4B6]" />
-                      </div>
-                      <span className="text-xs text-slate-500">{game.spotsLeft} spots left</span>
-                    </div>
-                    <button className="rounded-2xl bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600">
-                      Join
-                    </button>
-                  </div>
+              {joinError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {joinError}
                 </div>
-              ))}
+              ) : null}
+
+              {games.length > 0 ? (
+                games.map((game) => {
+                  const joined = joinedGameIds.includes(game.id);
+                  const spotsLeft = Math.max(game.max_players - game.current_players, 0);
+                  return (
+                    <div key={game.id} className="rounded-3xl border border-slate-200 bg-[#FBFEFC] p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950">{game.title}</p>
+                          <p className="mt-1 text-xs text-slate-500">{game.sport}</p>
+                        </div>
+                        <span className="rounded-full bg-[#E7F8EE] px-3 py-1 text-[11px] font-semibold text-[#0F6E56]">
+                          Open
+                        </span>
+                      </div>
+                      <div className="mt-4 grid gap-3 text-sm text-slate-600">
+                        <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
+                          <span>📅</span>
+                          <span>{game.date}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
+                          <span>🕐</span>
+                          <span>{game.start_time}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
+                          <span>📍</span>
+                          <span>{game.venue}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <span className="text-xs text-slate-500">
+                          {game.current_players}/{game.max_players} players · {spotsLeft} spots left
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleJoin(game)}
+                          disabled={joined || joiningGameId === game.id}
+                          className="rounded-2xl bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {joined ? "Joined" : joiningGameId === game.id ? "Joining..." : "Join"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+                  <p className="text-base font-semibold text-slate-900">No games yet for this sport — create one!</p>
+                  <Link href="/create-game" className="mt-3 inline-flex text-sm font-semibold text-[#1D9E75]">
+                    Create a game
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>
