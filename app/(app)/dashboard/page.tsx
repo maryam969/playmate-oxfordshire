@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createSupabaseClient } from "../../lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 
 const statsChips = [
   { label: "12 Games", value: "" },
