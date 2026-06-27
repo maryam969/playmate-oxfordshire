@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { createSupabaseClient } from "@/lib/supabase";
 
 const sportOptions = [
   { emoji: "⚽", label: "Football" },
@@ -37,13 +38,65 @@ const recentGames = [
 export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [firstName, setFirstName] = useState("Olivia");
-  const [lastName, setLastName] = useState("Lewis");
-  const [email] = useState("olivia.lewis@example.com");
-  const [location, setLocation] = useState("Oxford, Oxfordshire");
-  const [selectedSports, setSelectedSports] = useState<string[]>(["Football", "Tennis"]);
-  const [skillLevel, setSkillLevel] = useState("Intermediate");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [location, setLocation] = useState("");
+  const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  const [skillLevel, setSkillLevel] = useState("");
   const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+
+    const loadProfile = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) {
+        return;
+      }
+
+      setEmail(data.user.email ?? "");
+
+      const metadata = data.user.user_metadata as {
+        full_name?: string;
+        name?: string;
+        first_name?: string;
+        last_name?: string;
+      } | undefined;
+
+      let metadataFirstName = "";
+      let metadataLastName = "";
+
+      if (metadata?.first_name || metadata?.last_name) {
+        metadataFirstName = metadata.first_name ?? "";
+        metadataLastName = metadata.last_name ?? "";
+      } else {
+        const fullName = metadata?.full_name ?? metadata?.name ?? "";
+        const [first = "", ...rest] = fullName.trim().split(" ");
+        metadataFirstName = first;
+        metadataLastName = rest.join(" ");
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("first_name,last_name,location,sports,skill_level")
+        .eq("id", data.user.id)
+        .single();
+
+      if (!profileError && profileData) {
+        setFirstName(profileData.first_name ?? metadataFirstName);
+        setLastName(profileData.last_name ?? metadataLastName);
+        setLocation(profileData.location ?? "");
+        setSelectedSports(profileData.sports ?? []);
+        setSkillLevel(profileData.skill_level ?? "");
+      } else {
+        setFirstName(metadataFirstName);
+        setLastName(metadataLastName);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const handlePictureClick = () => {
     fileInputRef.current?.click();
@@ -69,8 +122,36 @@ export default function ProfilePage() {
     );
   };
 
-  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const supabase = createSupabaseClient();
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data.user) {
+      return;
+    }
+
+    const { error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          location,
+          sports: selectedSports,
+          skill_level: skillLevel,
+        },
+        { onConflict: "id" }
+      )
+      .select();
+
+    if (upsertError) {
+      console.error("Failed to save profile:", upsertError.message);
+      return;
+    }
+
     setShowToast(true);
     window.setTimeout(() => setShowToast(false), 3000);
   };
@@ -92,9 +173,13 @@ export default function ProfilePage() {
               className="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 text-2xl font-bold text-white shadow-lg shadow-slate-900/10"
             >
               {profileImage ? (
-                <img src={profileImage} alt="Olivia Lewis" className="h-full w-full rounded-full object-cover" />
+                <img
+                  src={profileImage}
+                  alt={`${firstName || "Profile"} ${lastName || ""}`.trim()}
+                  className="h-full w-full rounded-full object-cover"
+                />
               ) : (
-                "OL"
+                (firstName && lastName ? `${firstName[0] ?? ""}${lastName[0] ?? ""}` : "PL")
               )}
               <input
                 type="file"
@@ -105,15 +190,25 @@ export default function ProfilePage() {
               />
             </button>
             <div className="flex-1">
-              <p className="text-2xl font-semibold">Olivia Lewis</p>
-              <p className="mt-1 text-sm text-white/80">Oxford, Oxfordshire</p>
+              <p className="text-2xl font-semibold">
+                {firstName || lastName ? `${firstName} ${lastName}`.trim() : "Your profile"}
+              </p>
+              <p className="mt-1 text-sm text-white/80">{location || "Add your location"}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white">
-                  ⚽ Football
-                </span>
-                <span className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white">
-                  🎾 Tennis
-                </span>
+                {selectedSports.length > 0 ? (
+                  selectedSports.map((sport) => (
+                    <span
+                      key={sport}
+                      className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white"
+                    >
+                      {sportOptions.find((option) => option.label === sport)?.emoji ?? "🏅"} {sport}
+                    </span>
+                  ))
+                ) : (
+                  <span className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+                    Add your sports
+                  </span>
+                )}
               </div>
             </div>
           </div>
