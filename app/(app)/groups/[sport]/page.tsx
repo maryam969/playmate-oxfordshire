@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
 
 type ChatMessage = {
@@ -100,8 +100,9 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     loadMessages();
     loadGames();
 
+    const channelName = `chat-${sport}`;
     const subscription = supabase
-      .channel("messages")
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -111,33 +112,89 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           filter: `sport=eq.${sport}`,
         },
         (payload) => {
-          setMessages((current) => [...current, payload.new as ChatMessage]);
+          const newMsg = payload.new as ChatMessage;
+          setMessages((current) => {
+            // If message with same id already exists, skip
+            if (current.some((m) => m.id === newMsg.id)) return current;
+
+            // Try to find a temp message to replace (optimistic)
+            const tempIndex = current.findIndex(
+              (m) => m.id.startsWith("temp-") && m.content === newMsg.content && m.sender_name === newMsg.sender_name
+            );
+            if (tempIndex !== -1) {
+              const copy = [...current];
+              copy[tempIndex] = newMsg;
+              return copy;
+            }
+
+            return [...current, newMsg];
+          });
         }
       )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      try {
+        subscription.unsubscribe();
+      } catch (e) {
+        // ignore
+      }
     };
   }, [sport]);
 
-  const handleSend = async () => {
-    if (!messageInput.trim() || !currentUserId) {
-      return;
-    }
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
-    setSending(true);
-    const supabase = createSupabaseClient();
-    const { error } = await supabase.from("messages").insert({
+  useEffect(() => {
+    // scroll to bottom whenever messages change
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    } else if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = async () => {
+    const content = messageInput.trim();
+    if (!content || !currentUserId) return;
+
+    // optimistic message
+    const tempId = `temp-${Date.now()}`;
+    const createdAt = new Date().toISOString();
+    const optimistic: ChatMessage = {
+      id: tempId,
       sport,
       user_id: currentUserId,
       sender_name: currentUserName || "You",
-      content: messageInput.trim(),
-    });
+      content,
+      created_at: createdAt,
+    };
+
+    setSending(true);
+    setMessages((cur) => [...cur, optimistic]);
+    setMessageInput("");
+
+    const supabase = createSupabaseClient();
+    const { data, error } = await supabase.from("messages").insert({
+      sport,
+      user_id: currentUserId,
+      sender_name: currentUserName || "You",
+      content,
+    }).select();
 
     setSending(false);
-    if (!error) {
-      setMessageInput("");
+
+    if (error) {
+      // remove optimistic message
+      setMessages((cur) => cur.filter((m) => m.id !== tempId));
+      console.error("Failed to send message:", error.message);
+      return;
+    }
+
+    const real = (data && data[0]) as ChatMessage | undefined;
+    if (real) {
+      // replace the temp message if still present
+      setMessages((cur) => cur.map((m) => (m.id === tempId ? real : m)));
     }
   };
 
@@ -227,7 +284,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
         <div className="min-h-[calc(100vh-260px)] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
           {activeTab === "chat" ? (
-            <div className="space-y-4">
+            <div ref={messagesContainerRef} className="space-y-4">
               {messages.map((message, index) => {
                 const isOwn = message.user_id === currentUserId;
                 const isStartOfGroup = !isOwn && (index === 0 || messages[index - 1].user_id !== message.user_id);
@@ -266,6 +323,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
           ) : (
             <div className="space-y-4">
@@ -337,11 +395,17 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
               + Add game
             </Link>
-            <div className="flex flex-1 items-center gap-2 rounded-full bg-[#F0F2F5] px-3 py-2">
+              <div className="flex flex-1 items-center gap-2 rounded-full bg-[#F0F2F5] px-3 py-2">
               <input
                 type="text"
                 value={messageInput}
                 onChange={(event) => setMessageInput(event.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder="Message..."
                 className="flex-1 bg-transparent text-sm text-[#1a1a1a] outline-none placeholder:text-slate-400"
               />
