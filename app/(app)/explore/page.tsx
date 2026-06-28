@@ -36,10 +36,10 @@ type ProfileSummary = {
 
 type GamePlayersMap = Record<string, ProfileSummary[]>;
 type GeocodeState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "success"; lat: number; lng: number }
-  | { status: "error" };
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'success'; lat: number; lng: number };
 
 const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
   ssr: false,
@@ -387,6 +387,7 @@ export default function ExplorePage() {
               const joinedPlayers = gamePlayersByGame[game.id] ?? [];
               const visiblePlayers = joinedPlayers.slice(0, 4);
               const hiddenCount = Math.max(joinedPlayers.length - 4, 0);
+              const geocodeState = geocodeByGameId[game.id];
               return (
                 <div
                   key={game.id}
@@ -483,12 +484,12 @@ export default function ExplorePage() {
 
                   {expandedGameId === game.id ? (
                     <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-2">
-                      {geocodeByGameId[game.id]?.status === "loading" ? (
+                      {geocodeState?.status === "loading" ? (
                         <p className="px-2 py-4 text-sm text-slate-500">Finding location...</p>
-                      ) : geocodeByGameId[game.id]?.status === "success" ? (
+                      ) : geocodeState?.status === "success" ? (
                         <VenueLeafletMap
-                          lat={geocodeByGameId[game.id].lat}
-                          lng={geocodeByGameId[game.id].lng}
+                          lat={geocodeState.lat}
+                          lng={geocodeState.lng}
                           title={game.venue}
                         />
                       ) : (
