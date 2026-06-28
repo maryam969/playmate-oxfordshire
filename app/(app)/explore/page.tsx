@@ -81,12 +81,14 @@ export default function ExplorePage() {
         sport: string;
         title: string;
         date: string;
+        time: string;
         start_time: string;
         venue: string;
+        game_players?: { count: number }[];
         current_players: number;
         max_players: number;
-        creator_name?: string | null;
-        created_by?: string | null;
+        creator_name?: string;
+        created_by: string;
         user_id?: string | null;
         profiles?:
           | {
@@ -111,7 +113,7 @@ export default function ExplorePage() {
       for (const selectClause of gameSelects) {
         const result = await supabase.from("games").select(selectClause).order("date", { ascending: true });
         if (!result.error && result.data) {
-          gameRows = result.data as RawGameJoin[];
+          gameRows = (result.data ?? []) as unknown as RawGameJoin[];
           loadedGames = true;
           break;
         }
