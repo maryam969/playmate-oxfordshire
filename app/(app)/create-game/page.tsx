@@ -80,7 +80,7 @@ export default function CreateGamePage() {
       .from("games")
       .insert({
         created_by: userData.user.id,
-        creator_name: profile?.full_name ?? null,
+        creator_name: profile?.full_name ?? "",
         sport,
         title: `${sport} Game`,
         date: selectedDate,
