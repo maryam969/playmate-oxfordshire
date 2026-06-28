@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createSupabaseClient } from "../../lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -17,17 +17,21 @@ export default function SignInPage() {
     event.preventDefault();
     setLoading(true);
     setMessage("");
-    const supabase = createSupabaseClient();
+    try {
+      const supabase = createSupabaseClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
 
-    if (error) {
-      setMessage(error.message);
-      return;
+      router.replace("/dashboard");
+    } catch {
+      setMessage("Sign in failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
   };
 
   const handleGoogle = async () => {

@@ -111,7 +111,11 @@ export default function ExplorePage() {
       let gameRows: RawGameJoin[] = [];
       let loadedGames = false;
       for (const selectClause of gameSelects) {
+        console.log('Select clause:', selectClause);
         const result = await supabase.from("games").select(selectClause).order("date", { ascending: true });
+        console.log('Games fetch result:', JSON.stringify(result, null, 2));
+        console.log('Games data:', result.data);
+        console.log('Games error:', result.error);
         if (!result.error && result.data) {
           gameRows = (result.data ?? []) as unknown as RawGameJoin[];
           loadedGames = true;
