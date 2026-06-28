@@ -24,18 +24,9 @@ type GameRow = {
   venue: string;
   current_players: number;
   max_players: number;
-  host_user_id: string | null;
+  created_by: string | null;
   creator_name: string | null;
-  host_profile: ProfileSummary | null;
 };
-
-type ProfileSummary = {
-  id?: string;
-  full_name: string | null;
-  avatar_url: string | null;
-};
-
-type GamePlayersMap = Record<string, ProfileSummary[]>;
 type GeocodeState =
   | { status: 'idle' }
   | { status: 'loading' }
@@ -47,23 +38,11 @@ const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-ma
   loading: () => <p className="text-xs text-slate-500">Loading map...</p>,
 });
 
-const getInitials = (name: string | null | undefined) => {
-  const normalized = (name ?? "").trim();
-  if (!normalized) return "U";
-  return normalized
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-};
-
 export default function ExplorePage() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [games, setGames] = useState<GameRow[]>([]);
   const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
-  const [gamePlayersByGame, setGamePlayersByGame] = useState<GamePlayersMap>({});
   const [loading, setLoading] = useState(true);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
@@ -76,117 +55,18 @@ export default function ExplorePage() {
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
 
-      type RawGameJoin = {
-        id: string;
-        sport: string;
-        title: string;
-        date: string;
-        time: string;
-        start_time: string;
-        venue: string;
-        game_players?: { count: number }[];
-        current_players: number;
-        max_players: number;
-        creator_name?: string;
-        created_by: string;
-        user_id?: string | null;
-        profiles?:
-          | {
-              full_name: string | null;
-              avatar_url: string | null;
-            }
-          | Array<{
-              full_name: string | null;
-              avatar_url: string | null;
-            }>
-          | null;
-      };
+      const result = await supabase
+        .from("games")
+        .select("id, sport, title, date, start_time, venue, current_players, max_players, creator_name, created_by")
+        .order("date", { ascending: true });
 
-      const gameSelects = [
-        "id, sport, title, date, start_time, venue, current_players, max_players, creator_name, created_by, profiles!games_created_by_fkey(full_name, avatar_url)",
-        "id, sport, title, date, start_time, venue, current_players, max_players, creator_name, created_by, profiles(full_name, avatar_url)",
-        "id, sport, title, date, start_time, venue, current_players, max_players, creator_name, user_id, profiles(full_name, avatar_url)",
-      ];
-
-      let gameRows: RawGameJoin[] = [];
-      let loadedGames = false;
-      for (const selectClause of gameSelects) {
-        console.log('Select clause:', selectClause);
-        const result = await supabase.from("games").select(selectClause).order("date", { ascending: true });
-        console.log('Games fetch result:', JSON.stringify(result, null, 2));
-        console.log('Games data:', result.data);
-        console.log('Games error:', result.error);
-        if (!result.error && result.data) {
-          gameRows = (result.data ?? []) as unknown as RawGameJoin[];
-          loadedGames = true;
-          break;
-        }
-      }
-
-      if (!loadedGames) {
+      if (result.error) {
         setGames([]);
         setLoading(false);
         return;
       }
 
-      const baseGames: GameRow[] = gameRows.map((row) => {
-        const joinedProfile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-        return {
-          id: row.id,
-          sport: row.sport,
-          title: row.title,
-          date: row.date,
-          start_time: row.start_time,
-          venue: row.venue,
-          current_players: row.current_players,
-          max_players: row.max_players,
-          host_user_id: row.created_by ?? row.user_id ?? null,
-          creator_name: row.creator_name ?? null,
-          host_profile: joinedProfile
-            ? {
-                full_name: joinedProfile.full_name,
-                avatar_url: joinedProfile.avatar_url,
-              }
-            : null,
-        };
-      });
-
-      const gameIds = baseGames.map((game) => game.id);
-      let playersMap: GamePlayersMap = {};
-
-      if (gameIds.length > 0) {
-        const { data: gamePlayersData } = await supabase
-          .from("game_players")
-          .select("game_id, user_id")
-          .in("game_id", gameIds);
-
-        const playerUserIds = Array.from(
-          new Set((gamePlayersData ?? []).map((row) => row.user_id).filter(Boolean))
-        ) as string[];
-
-        let playerProfileById: Record<string, ProfileSummary> = {};
-        if (playerUserIds.length > 0) {
-          const { data: playerProfiles } = await supabase
-            .from("profiles")
-            .select("id, full_name, avatar_url")
-            .in("id", playerUserIds);
-
-          playerProfileById = (playerProfiles ?? []).reduce<Record<string, ProfileSummary>>((acc, profile) => {
-            acc[profile.id] = profile as ProfileSummary;
-            return acc;
-          }, {});
-        }
-
-        playersMap = (gamePlayersData ?? []).reduce<GamePlayersMap>((acc, row) => {
-          const profile = playerProfileById[row.user_id];
-          if (!profile) return acc;
-          const current = acc[row.game_id] ?? [];
-          if (!current.some((existing) => existing.id === profile.id)) {
-            acc[row.game_id] = [...current, profile];
-          }
-          return acc;
-        }, {});
-      }
+      const gameRows = (result.data ?? []) as GameRow[];
 
       if (user) {
         const { data: joinedData } = await supabase
@@ -197,8 +77,7 @@ export default function ExplorePage() {
         setJoinedGameIds((joinedData ?? []).map((row) => row.game_id));
       }
 
-      setGames(baseGames);
-      setGamePlayersByGame(playersMap);
+      setGames(gameRows);
       setLoading(false);
     };
 
@@ -356,12 +235,8 @@ export default function ExplorePage() {
               const joined = joinedGameIds.includes(game.id);
               const spotsLeft = Math.max(game.max_players - game.current_players, 0);
               const fewSpots = spotsLeft <= 3;
-              const hostName = game.host_profile?.full_name?.trim() || game.creator_name || "Unknown Host";
-              const hostAvatar = game.host_profile?.avatar_url || "";
+              const hostName = game.creator_name || "Unknown Host";
               const hostInitial = hostName.trim() ? hostName.trim().charAt(0).toUpperCase() : "U";
-              const joinedPlayers = gamePlayersByGame[game.id] ?? [];
-              const visiblePlayers = joinedPlayers.slice(0, 4);
-              const hiddenCount = Math.max(joinedPlayers.length - 4, 0);
               const geocodeState = geocodeByGameId[game.id];
               return (
                 <div
@@ -391,58 +266,18 @@ export default function ExplorePage() {
                   </div>
 
                   <div className="mt-3 flex items-center gap-2">
-                    {hostAvatar ? (
-                      <img
-                        src={hostAvatar}
-                        alt={hostName}
-                        title={hostName}
-                        className="h-7 w-7 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        title={hostName}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1D9E75] text-[10px] font-semibold text-white"
-                      >
-                        {hostInitial}
-                      </div>
-                    )}
+                    <div
+                      title={hostName}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1D9E75] text-[10px] font-semibold text-white"
+                    >
+                      {hostInitial}
+                    </div>
                     <p className="text-xs text-slate-600">Hosted by {hostName}</p>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm text-slate-500">
-                        {game.current_players}/{game.max_players} players
-                      </div>
-                      {joinedPlayers.length > 0 ? (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex -space-x-2">
-                            {visiblePlayers.map((player) => {
-                              const playerName = player.full_name?.trim() || "Player";
-                              return player.avatar_url ? (
-                                <img
-                                  key={player.id}
-                                  src={player.avatar_url}
-                                  alt={playerName}
-                                  title={playerName}
-                                  className="h-6 w-6 rounded-full border-2 border-white object-cover"
-                                />
-                              ) : (
-                                <div
-                                  key={player.id}
-                                  title={playerName}
-                                  className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#1D9E75] text-[9px] font-semibold text-white"
-                                >
-                                  {getInitials(playerName)}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {hiddenCount > 0 ? (
-                            <span className="text-xs text-slate-500">+{hiddenCount} more</span>
-                          ) : null}
-                        </div>
-                      ) : null}
+                    <div className="text-sm text-slate-500">
+                      {game.current_players}/{game.max_players} players
                     </div>
                     <button
                       type="button"
