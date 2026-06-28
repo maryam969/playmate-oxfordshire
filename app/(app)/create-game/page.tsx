@@ -70,10 +70,17 @@ export default function CreateGamePage() {
       return;
     }
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", userData.user.id)
+      .single();
+
     const { data: newGame, error: gameError } = await supabase
       .from("games")
       .insert({
         created_by: userData.user.id,
+        creator_name: profile?.full_name ?? null,
         sport,
         title: `${sport} Game`,
         date: selectedDate,

@@ -25,11 +25,12 @@ type GameRow = {
   current_players: number;
   max_players: number;
   host_user_id: string | null;
+  creator_name: string | null;
   host_profile: ProfileSummary | null;
 };
 
 type ProfileSummary = {
-  id: string;
+  id?: string;
   full_name: string | null;
   avatar_url: string | null;
 };
@@ -75,7 +76,7 @@ export default function ExplorePage() {
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
 
-      type RawGameCreatedBy = {
+      type RawGameJoin = {
         id: string;
         sport: string;
         title: string;
@@ -84,67 +85,47 @@ export default function ExplorePage() {
         venue: string;
         current_players: number;
         max_players: number;
-        created_by: string | null;
+        creator_name?: string | null;
+        created_by?: string | null;
+        user_id?: string | null;
+        profiles?:
+          | {
+              full_name: string | null;
+              avatar_url: string | null;
+            }
+          | Array<{
+              full_name: string | null;
+              avatar_url: string | null;
+            }>
+          | null;
       };
 
-      type RawGameUserId = {
-        id: string;
-        sport: string;
-        title: string;
-        date: string;
-        start_time: string;
-        venue: string;
-        current_players: number;
-        max_players: number;
-        user_id: string | null;
-      };
+      const gameSelects = [
+        "id, sport, title, date, start_time, venue, current_players, max_players, creator_name, created_by, profiles!games_created_by_fkey(full_name, avatar_url)",
+        "id, sport, title, date, start_time, venue, current_players, max_players, creator_name, created_by, profiles(full_name, avatar_url)",
+        "id, sport, title, date, start_time, venue, current_players, max_players, creator_name, user_id, profiles(full_name, avatar_url)",
+      ];
 
-      let hostKey: "created_by" | "user_id" = "created_by";
-      let baseGames: Array<{
-        id: string;
-        sport: string;
-        title: string;
-        date: string;
-        start_time: string;
-        venue: string;
-        current_players: number;
-        max_players: number;
-        host_user_id: string | null;
-      }> = [];
-
-      const createdByResult = await supabase
-        .from("games")
-        .select("id, sport, title, date, start_time, venue, current_players, max_players, created_by")
-        .order("date", { ascending: true });
-
-      if (!createdByResult.error && createdByResult.data) {
-        const rows = createdByResult.data as RawGameCreatedBy[];
-        baseGames = rows.map((row) => ({
-          id: row.id,
-          sport: row.sport,
-          title: row.title,
-          date: row.date,
-          start_time: row.start_time,
-          venue: row.venue,
-          current_players: row.current_players,
-          max_players: row.max_players,
-          host_user_id: row.created_by,
-        }));
-      } else {
-        hostKey = "user_id";
-        const userIdResult = await supabase
-          .from("games")
-          .select("id, sport, title, date, start_time, venue, current_players, max_players, user_id")
-          .order("date", { ascending: true });
-
-        if (userIdResult.error || !userIdResult.data) {
-          setGames([]);
-          setLoading(false);
-          return;
+      let gameRows: RawGameJoin[] = [];
+      let loadedGames = false;
+      for (const selectClause of gameSelects) {
+        const result = await supabase.from("games").select(selectClause).order("date", { ascending: true });
+        if (!result.error && result.data) {
+          gameRows = result.data as RawGameJoin[];
+          loadedGames = true;
+          break;
         }
+      }
 
-        const rows = userIdResult.data as RawGameUserId[];
-        baseGames = rows.map((row) => ({
+      if (!loadedGames) {
+        setGames([]);
+        setLoading(false);
+        return;
+      }
+
+      const baseGames: GameRow[] = gameRows.map((row) => {
+        const joinedProfile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        return {
           id: row.id,
           sport: row.sport,
           title: row.title,
@@ -153,24 +134,16 @@ export default function ExplorePage() {
           venue: row.venue,
           current_players: row.current_players,
           max_players: row.max_players,
-          host_user_id: row.user_id,
-        }));
-      }
-
-      const hostIds = Array.from(new Set(baseGames.map((game) => game.host_user_id).filter(Boolean))) as string[];
-      let hostProfileById: Record<string, ProfileSummary> = {};
-
-      if (hostIds.length > 0) {
-        const { data: hostProfiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url")
-          .in("id", hostIds);
-
-        hostProfileById = (hostProfiles ?? []).reduce<Record<string, ProfileSummary>>((acc, profile) => {
-          acc[profile.id] = profile as ProfileSummary;
-          return acc;
-        }, {});
-      }
+          host_user_id: row.created_by ?? row.user_id ?? null,
+          creator_name: row.creator_name ?? null,
+          host_profile: joinedProfile
+            ? {
+                full_name: joinedProfile.full_name,
+                avatar_url: joinedProfile.avatar_url,
+              }
+            : null,
+        };
+      });
 
       const gameIds = baseGames.map((game) => game.id);
       let playersMap: GamePlayersMap = {};
@@ -218,12 +191,7 @@ export default function ExplorePage() {
         setJoinedGameIds((joinedData ?? []).map((row) => row.game_id));
       }
 
-      const mergedGames: GameRow[] = baseGames.map((game) => ({
-        ...game,
-        host_profile: game.host_user_id ? hostProfileById[game.host_user_id] ?? null : null,
-      }));
-
-      setGames(mergedGames);
+      setGames(baseGames);
       setGamePlayersByGame(playersMap);
       setLoading(false);
     };
@@ -382,8 +350,9 @@ export default function ExplorePage() {
               const joined = joinedGameIds.includes(game.id);
               const spotsLeft = Math.max(game.max_players - game.current_players, 0);
               const fewSpots = spotsLeft <= 3;
-              const hostName = game.host_profile?.full_name?.trim() || "Unknown Host";
+              const hostName = game.host_profile?.full_name?.trim() || game.creator_name || "Unknown Host";
               const hostAvatar = game.host_profile?.avatar_url || "";
+              const hostInitial = hostName.trim() ? hostName.trim().charAt(0).toUpperCase() : "U";
               const joinedPlayers = gamePlayersByGame[game.id] ?? [];
               const visiblePlayers = joinedPlayers.slice(0, 4);
               const hiddenCount = Math.max(joinedPlayers.length - 4, 0);
@@ -428,7 +397,7 @@ export default function ExplorePage() {
                         title={hostName}
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1D9E75] text-[10px] font-semibold text-white"
                       >
-                        {getInitials(hostName)}
+                        {hostInitial}
                       </div>
                     )}
                     <p className="text-xs text-slate-600">Hosted by {hostName}</p>
