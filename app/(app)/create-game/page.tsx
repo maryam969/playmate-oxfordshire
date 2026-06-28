@@ -62,25 +62,42 @@ export default function CreateGamePage() {
     setErrorMessage("");
 
     const supabase = createSupabaseClient();
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user: initialUser },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (userError || !userData.user) {
+    if (userError || !initialUser) {
       setLoading(false);
       setErrorMessage("You need to be signed in to create a game.");
       return;
     }
 
+    const { data: { user } } = await supabase.auth.getUser()
+
     const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", userData.user.id)
-      .single();
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', user?.id)
+      .single()
+
+    console.log('Profile data:', profile)
+    console.log('User metadata:', user?.user_metadata)
+
+    const creatorName = (profile?.first_name || profile?.last_name)
+      ? `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
+      : user?.user_metadata?.full_name
+      || user?.user_metadata?.name
+      || user?.email
+      || 'Unknown'
+
+    console.log('Final creator name:', creatorName)
 
     const { data: newGame, error: gameError } = await supabase
       .from("games")
       .insert({
-        created_by: userData.user.id,
-        creator_name: profile?.full_name ?? "",
+        created_by: initialUser.id,
+        creator_name: creatorName,
         sport,
         title: `${sport} Game`,
         date: selectedDate,
@@ -102,7 +119,7 @@ export default function CreateGamePage() {
 
     const { error: playerError } = await supabase.from("game_players").insert({
       game_id: newGame.id,
-      user_id: userData.user.id,
+      user_id: initialUser.id,
     });
 
     if (playerError) {
