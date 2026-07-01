@@ -49,6 +49,18 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
 
   useEffect(() => {
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+    };
+  }, []);
+
+  useEffect(() => {
     const supabase = createSupabaseClient();
 
     const loadMessages = async () => {
@@ -284,7 +296,13 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   };
 
   return (
-    <div className="flex flex-col bg-[#F0F2F5]" style={{ height: "100dvh" }}>
+    <div
+      className="flex flex-col bg-[#F0F2F5]"
+      style={{
+        height: "100dvh",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 60px)",
+      }}
+    >
       <div className="flex h-full flex-col">
         <div className="shrink-0 bg-white px-3 py-2 border-b border-slate-200">
           <div className="flex items-center justify-between gap-3">
@@ -326,9 +344,9 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-hidden px-3 py-2">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
           {activeTab === "chat" ? (
-            <div className="h-full overflow-y-auto p-2 pb-24">
+            <div className="h-full overflow-y-auto p-2">
               <div className="space-y-4">
               {messages.length === 0 ? (
                 <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-slate-500">
@@ -440,10 +458,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           )}
         </div>
 
-        <div
-          className="fixed left-0 right-0 bg-white border-t border-slate-200 px-3 py-3 z-10"
-          style={{ bottom: "calc(env(safe-area-inset-bottom) + 60px)" }}
-        >
+        <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
               + Add game
