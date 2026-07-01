@@ -93,11 +93,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             .from("profiles")
             .select("id, avatar_url")
             .in("id", uniqueUserIds)
+          console.log("Fetched avatars for users:", uniqueUserIds)
+          console.log("Avatar profiles result:", profiles)
           if (profiles) {
             const avatarMap: Record<string, string> = {}
             profiles.forEach((p: { id: string; avatar_url: string | null }) => {
               if (p.avatar_url) avatarMap[p.id] = p.avatar_url
             })
+            console.log("Avatar map built:", avatarMap)
             setUserAvatars(avatarMap)
           }
         }
@@ -281,9 +284,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   };
 
   return (
-    <div className="flex h-screen flex-col bg-[#F0F2F5] text-[#1a1a1a]">
-      <div className="flex h-full flex-col px-4 pt-4">
-        <div className="shrink-0 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="fixed inset-0 flex flex-col bg-[#F0F2F5] text-[#1a1a1a]">
+      <div className="flex h-full flex-col">
+        <div className="shrink-0 px-4 pt-4 pb-2">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
               ←
@@ -301,36 +305,38 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
               <p className="text-sm text-slate-500">28 members</p>
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 shrink-0 rounded-[28px] border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("chat")}
-              className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
-                activeTab === "chat" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
-              }`}
-            >
-              Chat
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("games")}
-              className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
-                activeTab === "games" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
-              }`}
-            >
-              Games
-            </button>
           </div>
         </div>
 
-        <div className="mt-4 min-h-0 flex-1 overflow-hidden">
+        <div className="shrink-0 px-4 pb-2">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-2 shadow-sm">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("chat")}
+                className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
+                  activeTab === "chat" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
+                }`}
+              >
+                Chat
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("games")}
+                className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
+                  activeTab === "games" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
+                }`}
+              >
+                Games
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 min-h-0 px-4">
           {activeTab === "chat" ? (
-            <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4">
+            <div className="h-full overflow-y-auto rounded-[28px] border border-slate-200 bg-white shadow-sm p-4">
+              <div className="space-y-4">
               {messages.map((message) => {
                 const isOwn = message.user_id === currentUserId;
                 const initials = (message.sender_name || "U").split(" ").map((part) => part[0]).join("").slice(0, 1).toUpperCase();
@@ -368,11 +374,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                 );
               })}
                 <div ref={messagesEndRef} />
-                </div>
               </div>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="h-full overflow-y-auto rounded-[28px] border border-slate-200 bg-white shadow-sm p-4">
               <div className="space-y-4">
               {joinError ? (
                 <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -438,33 +443,35 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           )}
         </div>
 
-        <div className="mt-4 shrink-0 rounded-[28px] border border-slate-200 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+12px)] shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
-              + Add game
-            </Link>
-              <div className="flex flex-1 items-center gap-2 rounded-full bg-[#F0F2F5] px-3 py-2">
-              <input
-                type="text"
-                value={messageInput}
-                onChange={(event) => setMessageInput(event.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Message..."
-                className="flex-1 bg-transparent text-sm text-[#1a1a1a] outline-none placeholder:text-slate-400"
-              />
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={sending || !messageInput.trim()}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#1D9E75] text-lg text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {sending ? "…" : "➤"}
-              </button>
+        <div className="shrink-0 px-4 pb-4" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+          <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
+                + Add game
+              </Link>
+                <div className="flex flex-1 items-center gap-2 rounded-full bg-[#F0F2F5] px-3 py-2">
+                <input
+                  type="text"
+                  value={messageInput}
+                  onChange={(event) => setMessageInput(event.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Message..."
+                  className="flex-1 bg-transparent text-sm text-[#1a1a1a] outline-none placeholder:text-slate-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={sending || !messageInput.trim()}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#1D9E75] text-lg text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {sending ? "…" : "➤"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
