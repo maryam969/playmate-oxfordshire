@@ -440,7 +440,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           )}
         </div>
 
-        <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 80px)" }}>
+        <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-3" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
               + Add game
