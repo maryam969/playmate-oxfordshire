@@ -127,9 +127,9 @@ export default function ProfilePage() {
     if (!file) return;
 
     const supabase = createSupabaseClient();
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
 
-    if (authError || !authData.user) {
+    if (error || !data.user) {
       setToastType("error");
       setToastMessage("You need to be signed in to upload an avatar.");
       setShowToast(true);
@@ -142,7 +142,7 @@ export default function ProfilePage() {
     const extensionFromName = file.name.split(".").pop()?.toLowerCase();
     const extensionFromType = file.type.split("/").pop()?.toLowerCase();
     const fileExtension = extensionFromName || extensionFromType || "jpg";
-    const filePath = `${authData.user.id}.${fileExtension}`;
+    const filePath = `${data.user.id}.${fileExtension}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
       upsert: true,
@@ -166,7 +166,7 @@ export default function ProfilePage() {
       .from("profiles")
       .upsert(
         {
-          id: authData.user.id,
+          id: data.user.id,
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
         },
