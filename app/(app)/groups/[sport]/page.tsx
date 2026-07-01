@@ -43,6 +43,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
+  const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
   const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
@@ -66,6 +67,15 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           : userData.user.email?.split("@")[0] || "User"
 
         setCurrentUserName(fullName);
+
+        const { data: myProfile } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", userData.user.id)
+          .single()
+        if (myProfile?.avatar_url) {
+          setUserAvatars((prev) => ({ ...prev, [userData.user.id]: myProfile.avatar_url }))
+        }
       }
 
       const { data, error } = await supabase
@@ -76,6 +86,21 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
       if (!error && data) {
         setMessages(data as ChatMessage[]);
+
+        const uniqueUserIds = [...new Set(data.map((m: ChatMessage) => m.user_id))]
+        if (uniqueUserIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, avatar_url")
+            .in("id", uniqueUserIds)
+          if (profiles) {
+            const avatarMap: Record<string, string> = {}
+            profiles.forEach((p: { id: string; avatar_url: string | null }) => {
+              if (p.avatar_url) avatarMap[p.id] = p.avatar_url
+            })
+            setUserAvatars(avatarMap)
+          }
+        }
       }
     };
 
@@ -120,7 +145,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           table: "messages",
           filter: `sport=eq.${sport}`,
         },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as ChatMessage;
           setMessages((current) => {
             // If message with same id already exists, skip
@@ -138,6 +163,13 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
             return [...current, newMsg];
           });
+
+          if (!userAvatars[newMsg.user_id]) {
+            const { data: newProfile } = await supabase.from("profiles").select("avatar_url").eq("id", newMsg.user_id).single()
+            if (newProfile?.avatar_url) {
+              setUserAvatars(prev => ({ ...prev, [newMsg.user_id]: newProfile.avatar_url }))
+            }
+          }
         }
       )
       .subscribe();
@@ -316,9 +348,13 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                       </div>
                     ) : (
                       <div className="flex items-end gap-2">
-                        <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarBg} text-sm font-bold text-white`}>
-                          {initials}
-                        </div>
+                        {userAvatars[message.user_id] ? (
+                          <img src={userAvatars[message.user_id]} alt={message.sender_name} className="h-9 w-9 rounded-full object-cover" />
+                        ) : (
+                          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarBg} text-sm font-bold text-white`}>
+                            {initials}
+                          </div>
+                        )}
                         <div className="max-w-[80%]">
                           <div className="mb-1 text-[12px] font-medium text-slate-500">{message.sender_name}</div>
                           <div className="rounded-[18px] bg-[#F0F2F5] px-4 py-3 text-sm">
