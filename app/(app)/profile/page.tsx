@@ -144,14 +144,16 @@ export default function ProfilePage() {
     const fileExtension = extensionFromName || extensionFromType || "jpg";
     const filePath = `${data.user.id}.${fileExtension}`;
 
-    const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
+    const { data, error } = await supabase.storage.from("avatars").upload(filePath, file, {
       upsert: true,
     });
 
-    if (uploadError) {
+    if (error) console.log("Upload error:", error.message)
+
+    if (error) {
       setAvatarUploading(false);
       setToastType("error");
-      setToastMessage(`Failed to upload avatar: ${uploadError.message}`);
+      setToastMessage(`Failed to upload avatar: ${error.message}`);
       setShowToast(true);
       window.setTimeout(() => setShowToast(false), 3000);
       return;
