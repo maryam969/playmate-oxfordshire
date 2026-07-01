@@ -300,7 +300,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       className="flex flex-col bg-[#F0F2F5]"
       style={{
         height: "100dvh",
-        paddingBottom: "calc(env(safe-area-inset-bottom) + 60px)",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 70px)",
       }}
     >
       <div className="flex h-full flex-col">
