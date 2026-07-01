@@ -14,6 +14,15 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const isSportGroupPage = /^\/groups\/[^/]+$/.test(pathname ?? "");
+
+  if (isSportGroupPage) {
+    return (
+      <div className="min-h-screen bg-[#F0F2F5] text-[#1a1a1a]">
+        <div className="mx-auto h-screen max-w-[480px]">{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] text-[#1a1a1a]">
