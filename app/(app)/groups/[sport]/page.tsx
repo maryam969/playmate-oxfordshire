@@ -284,9 +284,9 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#F0F2F5] text-[#1a1a1a]">
+    <div className="flex flex-col bg-[#F0F2F5] text-[#1a1a1a]" style={{ height: "100dvh" }}>
       <div className="flex h-full flex-col">
-        <div className="shrink-0 px-4 pt-4 pb-2">
+        <div className="shrink-0 px-4 pt-2 pb-2">
           <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
@@ -333,7 +333,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 px-4">
+        <div className="flex-1 min-h-0 overflow-hidden px-4">
           {activeTab === "chat" ? (
             <div className="h-full overflow-y-auto rounded-[28px] border border-slate-200 bg-white shadow-sm p-4">
               <div className="space-y-4">
@@ -443,7 +443,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           )}
         </div>
 
-        <div className="shrink-0 px-4 pb-4" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+        <div className="shrink-0 px-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 80px)" }}>
           <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
               <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
