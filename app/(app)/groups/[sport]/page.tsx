@@ -54,8 +54,17 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user) {
         setCurrentUserId(userData.user.id);
-        const metadata = userData.user.user_metadata as { full_name?: string; name?: string } | undefined;
-        const fullName = metadata?.full_name ?? metadata?.name ?? "You";
+
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", userData.user.id)
+          .single()
+
+        const fullName = profileData?.first_name
+          ? `${profileData.first_name} ${profileData.last_name || ""}`.trim()
+          : userData.user.email?.split("@")[0] || "User"
+
         setCurrentUserName(fullName);
       }
 
