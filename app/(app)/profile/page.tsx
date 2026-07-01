@@ -127,9 +127,9 @@ export default function ProfilePage() {
     if (!file) return;
 
     const supabase = createSupabaseClient();
-    const { data, error } = await supabase.auth.getUser();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
 
-    if (error || !data.user) {
+    if (authError || !authData.user) {
       setToastType("error");
       setToastMessage("You need to be signed in to upload an avatar.");
       setShowToast(true);
@@ -142,18 +142,18 @@ export default function ProfilePage() {
     const extensionFromName = file.name.split(".").pop()?.toLowerCase();
     const extensionFromType = file.type.split("/").pop()?.toLowerCase();
     const fileExtension = extensionFromName || extensionFromType || "jpg";
-    const filePath = `${data.user.id}.${fileExtension}`;
+    const filePath = `${authData.user.id}.${fileExtension}`;
 
-    const { data, error } = await supabase.storage.from("avatars").upload(filePath, file, {
+    const { data: uploadData, error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
       upsert: true,
     });
 
-    if (error) console.log("Upload error:", error.message)
+    if (uploadError) console.log("Upload error:", uploadError.message)
 
-    if (error) {
+    if (uploadError) {
       setAvatarUploading(false);
       setToastType("error");
-      setToastMessage(`Failed to upload avatar: ${error.message}`);
+      setToastMessage(`Failed to upload avatar: ${uploadError.message}`);
       setShowToast(true);
       window.setTimeout(() => setShowToast(false), 3000);
       return;
@@ -166,7 +166,7 @@ export default function ProfilePage() {
       .from("profiles")
       .upsert(
         {
-          id: data.user.id,
+          id: authData.user.id,
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
         },
