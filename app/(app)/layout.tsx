@@ -14,29 +14,10 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const hideNavbarPaths = ["/groups/", "/games/create"];
-  const shouldHideNavbar = hideNavbarPaths.some((path) => pathname.includes(path));
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] text-[#1a1a1a]">
       <div className="mx-auto min-h-screen max-w-[480px] px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)]">
-        {!shouldHideNavbar ? (
-          <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-2">
-            <div>
-              <p className="text-base font-semibold text-slate-950">PlayMate</p>
-              <p className="text-[13px] text-slate-500">Oxfordshire</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100">
-                🔔
-              </button>
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#1D9E75]/10 text-sm font-semibold text-[#1D9E75]">
-                OL
-              </div>
-            </div>
-          </header>
-        ) : null}
-
         <main className="min-h-[calc(100vh-56px-64px)] overflow-y-auto pb-8 pt-4">{children}</main>
       </div>
 
