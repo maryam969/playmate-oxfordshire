@@ -8,6 +8,8 @@ import { createSupabaseClient } from "../../lib/supabase";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,12 +21,39 @@ export default function SignUpPage() {
     setMessage("");
     const supabase = createSupabaseClient();
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(),
+        },
+      },
+    });
     setLoading(false);
 
     if (error) {
       setMessage(error.message);
       return;
+    }
+
+    if (data.user) {
+      const { error: profileInsertError } = await supabase.from("profiles").upsert(
+        {
+          id: data.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+      if (profileInsertError) {
+        setMessage(profileInsertError.message);
+        return;
+      }
     }
 
     router.push("/onboarding");
@@ -52,6 +81,26 @@ export default function SignUpPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <label className="block text-sm font-medium text-slate-700">
+              First Name
+              <input
+                type="text"
+                value={firstName}
+                onChange={(event) => setFirstName(event.target.value)}
+                required
+                className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-700">
+              Last Name
+              <input
+                type="text"
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
+                required
+                className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+              />
+            </label>
             <label className="block text-sm font-medium text-slate-700">
               Email
               <input

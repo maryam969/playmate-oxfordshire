@@ -70,7 +70,7 @@ export default function ProfilePage() {
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("first_name, last_name, location, sports, skill_level, avatar_url")
         .eq("id", data.user.id)
         .single();
 

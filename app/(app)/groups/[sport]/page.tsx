@@ -287,10 +287,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-slate-200 bg-white shadow-sm">
               <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
                 <div className="space-y-4">
-              {messages.map((message, index) => {
+              {messages.map((message) => {
                 const isOwn = message.user_id === currentUserId;
-                const isStartOfGroup = !isOwn && (index === 0 || messages[index - 1].user_id !== message.user_id);
-                const isEndOfGroup = !isOwn && (index === messages.length - 1 || messages[index + 1].user_id !== message.user_id);
                 const initials = (message.sender_name || "U").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
                 const avatarBg = isOwn ? "bg-[#1D9E75]" : "bg-[#A855F7]";
                 return (
@@ -304,17 +302,11 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                       </div>
                     ) : (
                       <div className="flex items-end gap-2">
-                        {isEndOfGroup ? (
-                          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarBg} text-sm font-bold text-white`}>
-                            {initials}
-                          </div>
-                        ) : (
-                          <div className="h-9 w-9" />
-                        )}
+                        <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarBg} text-sm font-bold text-white`}>
+                          {initials}
+                        </div>
                         <div className="max-w-[80%]">
-                          {isStartOfGroup ? (
-                            <div className="mb-1 text-[12px] font-semibold text-[#1D9E75]">{message.sender_name}</div>
-                          ) : null}
+                          <div className="mb-1 text-[12px] font-semibold text-[#1D9E75]">{message.sender_name}</div>
                           <div className="rounded-[18px] bg-[#F0F2F5] px-4 py-3 text-sm">
                             <p className="text-[#1a1a1a]">{message.content}</p>
                             <p className="mt-2 text-right text-[11px] text-slate-500">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
