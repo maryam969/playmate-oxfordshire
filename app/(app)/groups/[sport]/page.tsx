@@ -142,16 +142,19 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     };
   }, [sport]);
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasInitialScrollDoneRef = useRef(false);
 
   useEffect(() => {
-    // scroll to bottom whenever messages change
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    } else if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    if (!messagesEndRef.current) return;
+
+    if (!hasInitialScrollDoneRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "instant", block: "end" });
+      hasInitialScrollDoneRef.current = true;
+      return;
     }
+
+    messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
   const handleSend = async () => {
@@ -285,12 +288,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
         <div className="mt-4 min-h-0 flex-1 overflow-hidden">
           {activeTab === "chat" ? (
             <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-4">
                 <div className="space-y-4">
               {messages.map((message) => {
                 const isOwn = message.user_id === currentUserId;
-                const initials = (message.sender_name || "U").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-                const avatarBg = isOwn ? "bg-[#1D9E75]" : "bg-[#A855F7]";
+                const initials = (message.sender_name || "U").split(" ").map((part) => part[0]).join("").slice(0, 1).toUpperCase();
+                const avatarColors = ["bg-violet-500", "bg-blue-500", "bg-orange-500", "bg-rose-500", "bg-cyan-500"];
+                const avatarIndex = (message.sender_name || "").split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % avatarColors.length;
+                const avatarBg = avatarColors[avatarIndex];
                 return (
                   <div key={message.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
                     {isOwn ? (
@@ -306,7 +311,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                           {initials}
                         </div>
                         <div className="max-w-[80%]">
-                          <div className="mb-1 text-[12px] font-semibold text-[#1D9E75]">{message.sender_name}</div>
+                          <div className="mb-1 text-[12px] font-medium text-slate-500">{message.sender_name}</div>
                           <div className="rounded-[18px] bg-[#F0F2F5] px-4 py-3 text-sm">
                             <p className="text-[#1a1a1a]">{message.content}</p>
                             <p className="mt-2 text-right text-[11px] text-slate-500">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
