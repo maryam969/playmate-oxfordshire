@@ -49,6 +49,11 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
 
   useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+    }
+
     document.body.style.overflow = "hidden";
     document.body.style.position = "fixed";
     document.body.style.width = "100%";
@@ -475,7 +480,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   }
                 }}
                 placeholder="Message..."
-                className="flex-1 bg-transparent text-sm text-[#1a1a1a] outline-none placeholder:text-slate-400"
+                className="flex-1 bg-transparent text-base text-[#1a1a1a] outline-none placeholder:text-slate-400"
+                style={{ fontSize: "16px" }}
               />
               <button
                 type="button"
