@@ -11,6 +11,9 @@ type ChatMessage = {
   sender_name: string;
   content: string;
   created_at: string;
+  reply_to_id?: string;
+  reply_to_content?: string;
+  reply_to_sender?: string;
 };
 
 type GameRow = {
@@ -36,6 +39,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [activeTab, setActiveTab] = useState("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserName, setCurrentUserName] = useState("");
@@ -44,6 +48,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
+  const [replyActionForId, setReplyActionForId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
   const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
@@ -62,6 +68,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.width = "";
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+      }
     };
   }, []);
 
@@ -221,6 +235,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const handleSend = async () => {
     const content = messageInput.trim();
     if (!content || !currentUserId) return;
+    const replyTarget = replyingTo;
 
     // optimistic message
     const tempId = `temp-${Date.now()}`;
@@ -232,11 +247,15 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       sender_name: currentUserName || "You",
       content,
       created_at: createdAt,
+      reply_to_id: replyTarget?.id || undefined,
+      reply_to_content: replyTarget?.content || undefined,
+      reply_to_sender: replyTarget?.sender_name || undefined,
     };
 
     setSending(true);
     setMessages((cur) => [...cur, optimistic]);
     setMessageInput("");
+    setReplyingTo(null);
 
     const supabase = createSupabaseClient();
     const { data, error } = await supabase.from("messages").insert({
@@ -244,6 +263,9 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       user_id: currentUserId,
       sender_name: currentUserName || "You",
       content,
+      reply_to_id: replyTarget?.id || null,
+      reply_to_content: replyTarget?.content || null,
+      reply_to_sender: replyTarget?.sender_name || null,
     }).select();
 
     setSending(false);
@@ -364,10 +386,37 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                 const avatarIndex = (message.sender_name || "").split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % avatarColors.length;
                 const avatarBg = avatarColors[avatarIndex];
                 return (
-                  <div key={message.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+                  <div
+                    key={message.id}
+                    className={`group flex items-center gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
+                    onTouchStart={() => {
+                      if (longPressTimerRef.current) {
+                        window.clearTimeout(longPressTimerRef.current);
+                      }
+                      longPressTimerRef.current = window.setTimeout(() => {
+                        setReplyActionForId(message.id);
+                      }, 500);
+                    }}
+                    onTouchEnd={() => {
+                      if (longPressTimerRef.current) {
+                        window.clearTimeout(longPressTimerRef.current);
+                      }
+                    }}
+                    onTouchCancel={() => {
+                      if (longPressTimerRef.current) {
+                        window.clearTimeout(longPressTimerRef.current);
+                      }
+                    }}
+                  >
                     {isOwn ? (
                       <div className="max-w-[80%] text-right">
                         <div className="inline-block rounded-[18px] bg-[#DCF8C6] px-4 py-3 text-sm">
+                          {message.reply_to_content ? (
+                            <div className="bg-black/10 rounded-lg px-2 py-1 mb-2 border-l-2 border-[#1D9E75] text-left">
+                              <p className="text-[11px] font-semibold text-[#1D9E75]">{message.reply_to_sender}</p>
+                              <p className="text-[11px] text-slate-600 truncate">{message.reply_to_content}</p>
+                            </div>
+                          ) : null}
                           <p className="text-[#1a1a1a]">{message.content}</p>
                           <p className="mt-2 text-right text-[11px] text-slate-500">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
                         </div>
@@ -384,12 +433,30 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                         <div className="max-w-[80%]">
                           <div className="mb-1 text-[12px] font-medium text-slate-500">{message.sender_name}</div>
                           <div className="rounded-[18px] bg-[#F0F2F5] px-4 py-3 text-sm">
+                            {message.reply_to_content ? (
+                              <div className="bg-black/10 rounded-lg px-2 py-1 mb-2 border-l-2 border-[#1D9E75]">
+                                <p className="text-[11px] font-semibold text-[#1D9E75]">{message.reply_to_sender}</p>
+                                <p className="text-[11px] text-slate-600 truncate">{message.reply_to_content}</p>
+                              </div>
+                            ) : null}
                             <p className="text-[#1a1a1a]">{message.content}</p>
                             <p className="mt-2 text-right text-[11px] text-slate-500">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
                           </div>
                         </div>
                       </div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyingTo(message);
+                        setReplyActionForId(null);
+                      }}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-base text-slate-500 shadow-sm transition ${
+                        replyActionForId === message.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      }`}
+                    >
+                      ↩
+                    </button>
                   </div>
                 );
               })}
@@ -464,6 +531,15 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
         </div>
 
         <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-3">
+          {replyingTo ? (
+            <div className="bg-green-50 border-l-4 border-[#1D9E75] px-3 py-2 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-[#1D9E75]">{replyingTo.sender_name}</p>
+                <p className="text-xs text-slate-500 truncate max-w-[250px]">{replyingTo.content}</p>
+              </div>
+              <button onClick={() => setReplyingTo(null)} className="text-slate-400 text-lg">✕</button>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
               + Add game
