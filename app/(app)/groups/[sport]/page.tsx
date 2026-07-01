@@ -48,8 +48,6 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
-  const [replyActionForId, setReplyActionForId] = useState<string | null>(null);
-  const longPressTimerRef = useRef<number | null>(null);
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
   const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
@@ -68,14 +66,6 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.width = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) {
-        window.clearTimeout(longPressTimerRef.current);
-      }
     };
   }, []);
 
@@ -386,28 +376,20 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                 const avatarIndex = (message.sender_name || "").split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % avatarColors.length;
                 const avatarBg = avatarColors[avatarIndex];
                 return (
-                  <div
-                    key={message.id}
-                    className={`group flex items-center gap-2 ${isOwn ? "justify-end" : "justify-start"}`}
-                    onTouchStart={() => {
-                      if (longPressTimerRef.current) {
-                        window.clearTimeout(longPressTimerRef.current);
-                      }
-                      longPressTimerRef.current = window.setTimeout(() => {
-                        setReplyActionForId(message.id);
-                      }, 500);
-                    }}
-                    onTouchEnd={() => {
-                      if (longPressTimerRef.current) {
-                        window.clearTimeout(longPressTimerRef.current);
-                      }
-                    }}
-                    onTouchCancel={() => {
-                      if (longPressTimerRef.current) {
-                        window.clearTimeout(longPressTimerRef.current);
-                      }
-                    }}
-                  >
+                  <div key={message.id} className={`${isOwn ? "flex items-center justify-end gap-1" : "flex items-end gap-1"}`}>
+                    {isOwn ? (
+                      <button
+                        type="button"
+                        onClick={() => setReplyingTo(message)}
+                        className="text-slate-400 hover:text-slate-600 p-1"
+                        title="Reply"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="9 17 4 12 9 7"></polyline>
+                          <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                        </svg>
+                      </button>
+                    ) : null}
                     {isOwn ? (
                       <div className="max-w-[80%] text-right">
                         <div className="inline-block rounded-[18px] bg-[#DCF8C6] px-4 py-3 text-sm">
@@ -445,18 +427,19 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                         </div>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReplyingTo(message);
-                        setReplyActionForId(null);
-                      }}
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-base text-slate-500 shadow-sm transition ${
-                        replyActionForId === message.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                      }`}
-                    >
-                      ↩
-                    </button>
+                    {!isOwn ? (
+                      <button
+                        type="button"
+                        onClick={() => setReplyingTo(message)}
+                        className="text-slate-400 hover:text-slate-600 p-1 mb-1"
+                        title="Reply"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="9 17 4 12 9 7"></polyline>
+                          <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                        </svg>
+                      </button>
+                    ) : null}
                   </div>
                 );
               })}
