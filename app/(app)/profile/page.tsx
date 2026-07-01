@@ -23,6 +23,7 @@ type RecentGame = {
 export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -79,6 +80,7 @@ export default function ProfilePage() {
         setLocation(profileData.location ?? "");
         setSelectedSports(profileData.sports ?? []);
         setSkillLevel(profileData.skill_level ?? "");
+        setProfileImage(profileData.avatar_url ?? null);
       } else {
         setFirstName(metadataFirstName);
         setLastName(metadataLastName);
@@ -120,18 +122,70 @@ export default function ProfilePage() {
     fileInputRef.current?.click();
   };
 
-  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setProfileImage(reader.result);
-      }
-    };
+    const supabase = createSupabaseClient();
+    const { data, error } = await supabase.auth.getUser();
 
-    reader.readAsDataURL(file);
+    if (error || !data.user) {
+      setToastType("error");
+      setToastMessage("You need to be signed in to upload an avatar.");
+      setShowToast(true);
+      window.setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    setAvatarUploading(true);
+
+    const extensionFromName = file.name.split(".").pop()?.toLowerCase();
+    const extensionFromType = file.type.split("/").pop()?.toLowerCase();
+    const fileExtension = extensionFromName || extensionFromType || "jpg";
+    const filePath = `${data.user.id}.${fileExtension}`;
+
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
+      upsert: true,
+    });
+
+    if (uploadError) {
+      setAvatarUploading(false);
+      setToastType("error");
+      setToastMessage(`Failed to upload avatar: ${uploadError.message}`);
+      setShowToast(true);
+      window.setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
+    const avatarUrl = publicUrlData.publicUrl;
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: data.user.id,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+    setAvatarUploading(false);
+
+    if (profileError) {
+      setToastType("error");
+      setToastMessage(`Failed to save avatar: ${profileError.message}`);
+      setShowToast(true);
+      window.setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    setProfileImage(avatarUrl);
+    setToastType("success");
+    setToastMessage("Profile picture updated successfully");
+    setShowToast(true);
+    window.setTimeout(() => setShowToast(false), 3000);
   };
 
   const toggleSport = (label: string) => {
@@ -199,6 +253,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={handlePictureClick}
+              disabled={avatarUploading}
               className="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 text-2xl font-bold text-white shadow-lg shadow-slate-900/10"
             >
               {profileImage ? (
