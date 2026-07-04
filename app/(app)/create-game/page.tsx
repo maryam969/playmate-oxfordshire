@@ -8,44 +8,44 @@ const sportOptions = ["Football", "Tennis", "Basketball", "Badminton", "Padel"];
 
 const venues = [
   {
-    name: "Tilsley Park Abingdon",
-    location: "Abingdon",
-    bookingUrl: "https://www.better.org.uk/leisure-centre/abingdon/tilsley-park",
+    name: "Cutteslowe Park (Oxford)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
   },
   {
-    name: "Oxford United Training Ground",
-    location: "Kidlington",
-    bookingUrl: null,
+    name: "Cowley Marsh (Oxford)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
   },
   {
-    name: "Ferry Sports Centre Oxford",
+    name: "Court Place Farm (Oxford)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Barton Park 3G (Oxford)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Five Mile Drive Recreation Park (Oxford)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Donnington Recreation Ground (Oxford)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Ferry Sports Centre (Oxford)",
     location: "Oxford",
     bookingUrl: "https://www.better.org.uk/leisure-centre/oxford/ferry-leisure-centre",
   },
   {
-    name: "Cutteslowe Park (football)",
+    name: "Oxford City FC Community Arena (Oxford)",
     location: "Oxford",
-    bookingUrl: "https://pitchbooking.com/partners/occ",
-  },
-  {
-    name: "Cowley Marsh (football/cricket)",
-    location: "Oxford",
-    bookingUrl: "https://pitchbooking.com/partners/occ",
-  },
-  {
-    name: "Court Place Farm (football)",
-    location: "Oxford",
-    bookingUrl: "https://pitchbooking.com/partners/occ",
-  },
-  {
-    name: "Barton Park 3G",
-    location: "Oxford",
-    bookingUrl: "https://pitchbooking.com/partners/occ",
-  },
-  {
-    name: "Five Mile Drive Recreation Park",
-    location: "Oxford",
-    bookingUrl: "https://pitchbooking.com/partners/occ",
+    bookingUrl: "https://portal.sportskey.com/venues/oxford-city-f-c",
   },
 ];
 
