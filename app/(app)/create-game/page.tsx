@@ -79,6 +79,7 @@ export default function CreateGamePage() {
   const [selectedVenue, setSelectedVenue] = useState(venues[0].name);
   const [pitchCost, setPitchCost] = useState(0);
   const [isBooked, setIsBooked] = useState(false);
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -138,6 +139,7 @@ export default function CreateGamePage() {
         pitch_cost: pitchCost,
         is_booked: isBooked,
         booking_url: selectedVenueData?.bookingUrl ?? null,
+        description,
         match_type: matchType,
         max_players: players,
         current_players: 1,
@@ -428,6 +430,21 @@ export default function CreateGamePage() {
                   Not booked yet
                 </button>
               </div>
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Description (optional)</p>
+                <p className="mt-1 text-xs text-slate-500">Add any notes for players — what you&apos;ll be wearing, what to bring, where to meet</p>
+              </div>
+              <textarea
+                rows={4}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="e.g. I&apos;ll be there wearing a pink jacket 🧥"
+                className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                style={{ fontSize: "16px" }}
+              />
             </div>
           </div>
         </div>

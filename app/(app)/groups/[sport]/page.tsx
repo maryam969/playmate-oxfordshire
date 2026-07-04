@@ -24,6 +24,7 @@ type GameRow = {
   date: string;
   start_time: string;
   venue: string;
+  description: string | null;
   pitch_cost: number;
   is_booked: boolean;
   current_players: number;
@@ -62,6 +63,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
+  const [expandedDetailsGameId, setExpandedDetailsGameId] = useState<string | null>(null);
   const [geocodeByVenue, setGeocodeByVenue] = useState<Record<string, GeocodeState>>({});
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
   const { sport } = use(params);
@@ -154,7 +156,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
       const { data: gamesData, error: gamesError } = await supabase
         .from("games")
-        .select("id, sport, title, date, start_time, venue, pitch_cost, is_booked, current_players, max_players")
+        .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, current_players, max_players")
         .ilike("sport", sport);
 
       if (!gamesError && gamesData) {
@@ -514,6 +516,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   const spotsLeft = Math.max(game.max_players - game.current_players, 0);
                   const fewSpots = spotsLeft <= 3;
                   const geocodeState = geocodeByVenue[game.venue];
+                  const hasDescription = Boolean(game.description?.trim());
                   const encodedVenue = encodeURIComponent(`${game.venue}, Oxford`);
                   const hasCoords = geocodeState?.status === "success";
                   const googleUrl = hasCoords
@@ -566,6 +569,24 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                       >
                         {expandedGameId === game.id ? "Hide map" : "See map"}
                       </button>
+
+                      {hasDescription ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedDetailsGameId((current) => (current === game.id ? null : game.id))
+                          }
+                          className="mt-2 text-sm font-semibold text-[#1D9E75]"
+                        >
+                          {expandedDetailsGameId === game.id ? "Hide details" : "See details"}
+                        </button>
+                      ) : null}
+
+                      {hasDescription && expandedDetailsGameId === game.id ? (
+                        <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                          {game.description}
+                        </div>
+                      ) : null}
 
                       <div className="mt-2 flex items-center gap-2">
                         <span className="text-xs text-slate-500">Directions:</span>
