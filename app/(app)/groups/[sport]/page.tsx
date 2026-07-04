@@ -514,6 +514,17 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   const spotsLeft = Math.max(game.max_players - game.current_players, 0);
                   const fewSpots = spotsLeft <= 3;
                   const geocodeState = geocodeByVenue[game.venue];
+                  const encodedVenue = encodeURIComponent(`${game.venue}, Oxford`);
+                  const hasCoords = geocodeState?.status === "success";
+                  const googleUrl = hasCoords
+                    ? `https://www.google.com/maps/search/?api=1&query=${geocodeState.lat},${geocodeState.lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodedVenue}`;
+                  const appleUrl = hasCoords
+                    ? `https://maps.apple.com/?ll=${geocodeState.lat},${geocodeState.lng}`
+                    : `https://maps.apple.com/?q=${encodedVenue}`;
+                  const wazeUrl = hasCoords
+                    ? `https://waze.com/ul?ll=${geocodeState.lat},${geocodeState.lng}&navigate=yes`
+                    : `https://waze.com/ul?q=${encodedVenue}`;
                   return (
                     <div key={game.id} className="rounded-3xl border border-slate-200 bg-[#FBFEFC] p-4">
                       <div className="flex items-center justify-between gap-3">
@@ -555,6 +566,19 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                       >
                         {expandedGameId === game.id ? "Hide map" : "See map"}
                       </button>
+
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Directions:</span>
+                        <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1D9E75] hover:underline">
+                          Google Maps
+                        </a>
+                        <a href={appleUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1D9E75] hover:underline">
+                          Apple Maps
+                        </a>
+                        <a href={wazeUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1D9E75] hover:underline">
+                          Waze
+                        </a>
+                      </div>
 
                       {expandedGameId === game.id ? (
                         <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-2">

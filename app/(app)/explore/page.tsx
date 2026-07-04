@@ -241,6 +241,17 @@ export default function ExplorePage() {
               const hostName = game.creator_name || "Unknown Host";
               const hostInitial = hostName.trim() ? hostName.trim().charAt(0).toUpperCase() : "U";
               const geocodeState = geocodeByVenue[game.venue];
+              const encodedVenue = encodeURIComponent(`${game.venue}, Oxford`);
+              const hasCoords = geocodeState?.status === "success";
+              const googleUrl = hasCoords
+                ? `https://www.google.com/maps/search/?api=1&query=${geocodeState.lat},${geocodeState.lng}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodedVenue}`;
+              const appleUrl = hasCoords
+                ? `https://maps.apple.com/?ll=${geocodeState.lat},${geocodeState.lng}`
+                : `https://maps.apple.com/?q=${encodedVenue}`;
+              const wazeUrl = hasCoords
+                ? `https://waze.com/ul?ll=${geocodeState.lat},${geocodeState.lng}&navigate=yes`
+                : `https://waze.com/ul?q=${encodedVenue}`;
               return (
                 <div
                   key={game.id}
@@ -283,6 +294,19 @@ export default function ExplorePage() {
                   >
                     {expandedGameId === game.id ? "Hide map" : "See map"}
                   </button>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Directions:</span>
+                    <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1D9E75] hover:underline">
+                      Google Maps
+                    </a>
+                    <a href={appleUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1D9E75] hover:underline">
+                      Apple Maps
+                    </a>
+                    <a href={wazeUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1D9E75] hover:underline">
+                      Waze
+                    </a>
+                  </div>
 
                   {game.pitch_cost > 0 ? (
                     <p className="mt-3 text-sm text-slate-600">
