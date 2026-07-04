@@ -10,17 +10,42 @@ const venues = [
   {
     name: "Tilsley Park Abingdon",
     location: "Abingdon",
-    link: "https://www.oxfordshire.gov.uk/tilsley-park",
-  },
-  {
-    name: "Ferry Sports Centre Oxford",
-    location: "Oxford",
-    link: "https://www.oxfordshire.gov.uk/ferry-sports-centre",
+    bookingUrl: "https://www.better.org.uk/leisure-centre/abingdon/tilsley-park",
   },
   {
     name: "Oxford United Training Ground",
     location: "Kidlington",
-    link: "https://www.oufc.co.uk/training-ground",
+    bookingUrl: null,
+  },
+  {
+    name: "Ferry Sports Centre Oxford",
+    location: "Oxford",
+    bookingUrl: "https://www.better.org.uk/leisure-centre/oxford/ferry-leisure-centre",
+  },
+  {
+    name: "Cutteslowe Park (football)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Cowley Marsh (football/cricket)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Court Place Farm (football)",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Barton Park 3G",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
+  },
+  {
+    name: "Five Mile Drive Recreation Park",
+    location: "Oxford",
+    bookingUrl: "https://pitchbooking.com/partners/occ",
   },
 ];
 
@@ -52,10 +77,16 @@ export default function CreateGamePage() {
   const [duration, setDuration] = useState(durationOptions[1]);
   const [players, setPlayers] = useState(8);
   const [selectedVenue, setSelectedVenue] = useState(venues[0].name);
+  const [pitchCost, setPitchCost] = useState(0);
+  const [isBooked, setIsBooked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const dateOptions = useMemo(() => getDateOptions(), []);
+  const selectedVenueData = useMemo(
+    () => venues.find((venue) => venue.name === selectedVenue) ?? null,
+    [selectedVenue]
+  );
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -104,6 +135,9 @@ export default function CreateGamePage() {
         start_time: startTime,
         duration,
         venue: selectedVenue,
+        pitch_cost: pitchCost,
+        is_booked: isBooked,
+        booking_url: selectedVenueData?.bookingUrl ?? null,
         match_type: matchType,
         max_players: players,
         current_players: 1,
@@ -339,6 +373,60 @@ export default function CreateGamePage() {
                     </div>
                   </button>
                 ))}
+              </div>
+
+              {selectedVenueData?.bookingUrl && !isBooked ? (
+                <a
+                  href={selectedVenueData.bookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex text-sm font-semibold text-[#1D9E75]"
+                >
+                  Book this pitch on the venue&apos;s site →
+                </a>
+              ) : null}
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Pitch cost (optional)</p>
+                <p className="mt-1 text-xs text-slate-500">Total cost of the venue — we&apos;ll show everyone their share</p>
+              </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">£</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={pitchCost === 0 ? "" : pitchCost}
+                  onChange={(event) => setPitchCost(Number(event.target.value) || 0)}
+                  placeholder="60"
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 py-3 pl-8 pr-4 text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4 space-y-3">
+              <p className="text-sm font-semibold text-slate-900">Have you booked the pitch?</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBooked(true)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    isBooked ? "bg-[#1D9E75] text-white" : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  Booked ✓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsBooked(false)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    !isBooked ? "bg-[#1D9E75] text-white" : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  Not booked yet
+                </button>
               </div>
             </div>
           </div>

@@ -22,6 +22,9 @@ type GameRow = {
   date: string;
   start_time: string;
   venue: string;
+  pitch_cost: number;
+  is_booked: boolean;
+  booking_url: string | null;
   current_players: number;
   max_players: number;
   created_by: string | null;
@@ -57,7 +60,7 @@ export default function ExplorePage() {
 
       const result = await supabase
         .from("games")
-        .select("id, sport, title, date, start_time, venue, current_players, max_players, creator_name, created_by")
+        .select("id, sport, title, date, start_time, venue, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by")
         .order("date", { ascending: true });
 
       if (result.error) {
@@ -254,9 +257,18 @@ export default function ExplorePage() {
                         <p className="mt-1 text-xs text-slate-500">{game.sport}</p>
                       </div>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${fewSpots ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-700"}`}>
-                      {spotsLeft} spots left
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${fewSpots ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-700"}`}>
+                        {spotsLeft} spots left
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          game.is_booked ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {game.is_booked ? "Pitch booked ✓" : "Pitch not booked yet"}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
@@ -264,6 +276,12 @@ export default function ExplorePage() {
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">🕐 {game.start_time}</span>
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">📍 {game.venue}</span>
                   </div>
+
+                  {game.pitch_cost > 0 ? (
+                    <p className="mt-3 text-sm text-slate-600">
+                      £{game.pitch_cost} total · £{(game.pitch_cost / game.max_players).toFixed(2)} each
+                    </p>
+                  ) : null}
 
                   <div className="mt-3 flex items-center gap-2">
                     <div
