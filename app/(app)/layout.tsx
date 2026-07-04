@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, MessageCircle, Plus, Search, User } from "lucide-react";
 import type { ReactNode } from "react";
 
 const navItems = [
-  { href: "/dashboard", label: "Home", icon: "🏠" },
-  { href: "/groups/football", label: "Groups", icon: "💬" },
-  { href: "/create-game", label: "Create", icon: "➕", special: true },
-  { href: "/explore", label: "Explore", icon: "🔍" },
-  { href: "/profile", label: "Profile", icon: "👤" },
+  { href: "/dashboard", label: "Home" },
+  { href: "/groups/football", label: "Groups" },
+  { href: "/create-game", label: "Create", special: true },
+  { href: "/explore", label: "Explore" },
+  { href: "/profile", label: "Profile" },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -27,19 +28,29 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           if (item.special) {
             return (
               <Link key={item.href} href={item.href} className="relative -mt-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#1D9E75] text-white shadow-lg shadow-[#1D9E75]/20 ring-4 ring-white transition hover:bg-emerald-600">
-                <span className="text-2xl">{item.icon}</span>
+                <Plus size={24} strokeWidth={2} />
               </Link>
             );
           }
+
+          const Icon =
+            item.href === "/dashboard"
+              ? Home
+              : item.href === "/groups/football"
+              ? MessageCircle
+              : item.href === "/explore"
+              ? Search
+              : User;
+
           return (
             <Link
               key={item.href}
               href={item.href}
               className={`inline-flex flex-col items-center justify-center gap-1 text-[11px] transition ${
-                active ? "text-[#1D9E75]" : "text-[#9CA3AF]"
+                active ? "text-[#1D9E75]" : "text-slate-400"
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
+              <Icon size={22} strokeWidth={2} />
               <span>{item.label}</span>
             </Link>
           );
