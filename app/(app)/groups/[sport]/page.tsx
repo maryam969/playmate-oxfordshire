@@ -562,25 +562,27 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                           <span>{game.venue}</span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleMapToggle(game)}
-                        className="mt-3 text-sm font-semibold text-[#1D9E75]"
-                      >
-                        {expandedGameId === game.id ? "Hide map" : "See map"}
-                      </button>
-
-                      {hasDescription ? (
+                      <div className="mt-2 flex items-center gap-4">
                         <button
                           type="button"
-                          onClick={() =>
-                            setExpandedDetailsGameId((current) => (current === game.id ? null : game.id))
-                          }
-                          className="mt-2 text-sm font-semibold text-[#1D9E75]"
+                          onClick={() => handleMapToggle(game)}
+                          className="text-sm font-semibold text-[#1D9E75] hover:underline"
                         >
-                          {expandedDetailsGameId === game.id ? "Hide details" : "See details"}
+                          {expandedGameId === game.id ? "Hide map" : "See map"}
                         </button>
-                      ) : null}
+
+                        {hasDescription ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedDetailsGameId((current) => (current === game.id ? null : game.id))
+                            }
+                            className="text-sm font-semibold text-[#1D9E75] hover:underline"
+                          >
+                            {expandedDetailsGameId === game.id ? "Hide details" : "See details"}
+                          </button>
+                        ) : null}
+                      </div>
 
                       {hasDescription && expandedDetailsGameId === game.id ? (
                         <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
