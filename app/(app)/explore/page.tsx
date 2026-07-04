@@ -49,7 +49,7 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
-  const [geocodeByGameId, setGeocodeByGameId] = useState<Record<string, GeocodeState>>({});
+  const [geocodeByVenue, setGeocodeByVenue] = useState<Record<string, GeocodeState>>({});
   const [joinError, setJoinError] = useState("");
 
   useEffect(() => {
@@ -143,44 +143,44 @@ export default function ExplorePage() {
     setJoiningGameId(null);
   };
 
-  const loadVenueCoordinates = async (game: GameRow) => {
-    setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "loading" } }));
+  const loadVenueCoordinates = async (venue: string) => {
+    setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "loading" } }));
 
     try {
-      const query = `${game.venue}, Oxfordshire`;
+      const query = `${venue}, Oxford`;
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`
       );
 
       if (!response.ok) {
-        setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "error" } }));
+        setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
         return;
       }
 
       const result = (await response.json()) as Array<{ lat: string; lon: string }>;
       if (!result[0]) {
-        setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "error" } }));
+        setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
         return;
       }
 
-      setGeocodeByGameId((current) => ({
+      setGeocodeByVenue((current) => ({
         ...current,
-        [game.id]: { status: "success", lat: Number(result[0].lat), lng: Number(result[0].lon) },
+        [venue]: { status: "success", lat: Number(result[0].lat), lng: Number(result[0].lon) },
       }));
     } catch {
-      setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "error" } }));
+      setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
     }
   };
 
-  const handleCardClick = (game: GameRow) => {
+  const handleMapToggle = (game: GameRow) => {
     setExpandedGameId((current) => {
       if (current === game.id) return null;
       return game.id;
     });
 
-    const currentGeocode = geocodeByGameId[game.id];
+    const currentGeocode = geocodeByVenue[game.venue];
     if (!currentGeocode || currentGeocode.status === "idle" || currentGeocode.status === "error") {
-      loadVenueCoordinates(game);
+      loadVenueCoordinates(game.venue);
     }
   };
 
@@ -240,12 +240,11 @@ export default function ExplorePage() {
               const fewSpots = spotsLeft <= 3;
               const hostName = game.creator_name || "Unknown Host";
               const hostInitial = hostName.trim() ? hostName.trim().charAt(0).toUpperCase() : "U";
-              const geocodeState = geocodeByGameId[game.id];
+              const geocodeState = geocodeByVenue[game.venue];
               return (
                 <div
                   key={game.id}
-                  onClick={() => handleCardClick(game)}
-                  className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer"
+                  className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -276,6 +275,14 @@ export default function ExplorePage() {
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">🕐 {game.start_time}</span>
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">📍 {game.venue}</span>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleMapToggle(game)}
+                    className="mt-3 text-sm font-semibold text-[#1D9E75]"
+                  >
+                    {expandedGameId === game.id ? "Hide map" : "See map"}
+                  </button>
 
                   {game.pitch_cost > 0 ? (
                     <p className="mt-3 text-sm text-slate-600">

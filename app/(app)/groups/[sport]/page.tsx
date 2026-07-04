@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
@@ -29,6 +30,12 @@ type GameRow = {
   max_players: number;
 };
 
+type GeocodeState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "success"; lat: number; lng: number };
+
 const sportIcons: Record<string, string> = {
   football: "⚽",
   tennis: "🎾",
@@ -36,6 +43,11 @@ const sportIcons: Record<string, string> = {
   badminton: "🏸",
   padel: "🥎",
 };
+
+const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
+  ssr: false,
+  loading: () => <p className="text-xs text-slate-500">Loading map...</p>,
+});
 
 export default function SportGroupPage({ params }: { params: Promise<{ sport: string }> }) {
   const [activeTab, setActiveTab] = useState("chat");
@@ -49,6 +61,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
+  const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
+  const [geocodeByVenue, setGeocodeByVenue] = useState<Record<string, GeocodeState>>({});
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
@@ -314,6 +328,43 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     setJoiningGameId(null);
   };
 
+  const loadVenueCoordinates = async (venue: string) => {
+    setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "loading" } }));
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${venue}, Oxford`)}&format=json&limit=1`
+      );
+
+      if (!response.ok) {
+        setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
+        return;
+      }
+
+      const result = (await response.json()) as Array<{ lat: string; lon: string }>;
+      if (!result[0]) {
+        setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
+        return;
+      }
+
+      setGeocodeByVenue((current) => ({
+        ...current,
+        [venue]: { status: "success", lat: Number(result[0].lat), lng: Number(result[0].lon) },
+      }));
+    } catch {
+      setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
+    }
+  };
+
+  const handleMapToggle = (game: GameRow) => {
+    setExpandedGameId((current) => (current === game.id ? null : game.id));
+
+    const currentGeocode = geocodeByVenue[game.venue];
+    if (!currentGeocode || currentGeocode.status === "idle" || currentGeocode.status === "error") {
+      loadVenueCoordinates(game.venue);
+    }
+  };
+
   return (
     <div
       className="flex flex-col bg-[#F0F2F5]"
@@ -462,6 +513,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   const joined = joinedGameIds.includes(game.id);
                   const spotsLeft = Math.max(game.max_players - game.current_players, 0);
                   const fewSpots = spotsLeft <= 3;
+                  const geocodeState = geocodeByVenue[game.venue];
                   return (
                     <div key={game.id} className="rounded-3xl border border-slate-200 bg-[#FBFEFC] p-4">
                       <div className="flex items-center justify-between gap-3">
@@ -496,6 +548,26 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                           <span>{game.venue}</span>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleMapToggle(game)}
+                        className="mt-3 text-sm font-semibold text-[#1D9E75]"
+                      >
+                        {expandedGameId === game.id ? "Hide map" : "See map"}
+                      </button>
+
+                      {expandedGameId === game.id ? (
+                        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                          {geocodeState?.status === "loading" ? (
+                            <p className="px-2 py-4 text-sm text-slate-500">Finding location...</p>
+                          ) : geocodeState?.status === "success" ? (
+                            <VenueLeafletMap lat={geocodeState.lat} lng={geocodeState.lng} title={game.venue} />
+                          ) : (
+                            <p className="px-2 py-4 text-sm text-slate-500">Location not found</p>
+                          )}
+                        </div>
+                      ) : null}
+
                       {game.pitch_cost > 0 ? (
                         <p className="mt-3 text-sm text-slate-600">
                           £{game.pitch_cost} total · £{(game.pitch_cost / game.max_players).toFixed(2)} each
