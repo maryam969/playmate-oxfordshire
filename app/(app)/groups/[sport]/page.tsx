@@ -2,7 +2,9 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { use, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createElement, use, useEffect, useRef, useState } from "react";
+import { MoreVertical } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { getSportIcon } from "@/lib/sport-icons";
 
@@ -30,6 +32,8 @@ type GameRow = {
   is_booked: boolean;
   current_players: number;
   max_players: number;
+  created_by: string | null;
+  status: string | null;
 };
 
 type GeocodeState =
@@ -44,6 +48,7 @@ const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-ma
 });
 
 export default function SportGroupPage({ params }: { params: Promise<{ sport: string }> }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState("");
@@ -54,14 +59,16 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [games, setGames] = useState<GameRow[]>([]);
   const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
+  const [leavingGameId, setLeavingGameId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
   const [expandedDetailsGameId, setExpandedDetailsGameId] = useState<string | null>(null);
+  const [openMenuGameId, setOpenMenuGameId] = useState<string | null>(null);
   const [geocodeByVenue, setGeocodeByVenue] = useState<Record<string, GeocodeState>>({});
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
-  const SportIcon = getSportIcon(sport);
+  const sportHeaderIcon = getSportIcon(sport);
 
   useEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
@@ -149,7 +156,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
       const { data: gamesData, error: gamesError } = await supabase
         .from("games")
-        .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, current_players, max_players")
+        .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, current_players, max_players, created_by, status")
         .ilike("sport", sport);
 
       if (!gamesError && gamesData) {
@@ -286,7 +293,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   };
 
   const handleJoin = async (game: GameRow) => {
-    if (!currentUserId || joinedGameIds.includes(game.id)) {
+    if (!currentUserId || joinedGameIds.includes(game.id) || game.created_by === currentUserId || game.status === "cancelled") {
       return;
     }
 
@@ -321,6 +328,77 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       current.map((item) => (item.id === game.id ? { ...item, current_players: item.current_players + 1 } : item))
     );
     setJoiningGameId(null);
+  };
+
+  const handleLeave = async (game: GameRow) => {
+    if (!currentUserId || game.created_by === currentUserId) {
+      return;
+    }
+
+    const confirmed = window.confirm("Leave this game?");
+    if (!confirmed) {
+      return;
+    }
+
+    setLeavingGameId(game.id);
+    setJoinError("");
+
+    const supabase = createSupabaseClient();
+    const { error: deleteError } = await supabase
+      .from("game_players")
+      .delete()
+      .eq("game_id", game.id)
+      .eq("user_id", currentUserId);
+
+    if (deleteError) {
+      setJoinError(deleteError.message);
+      setLeavingGameId(null);
+      return;
+    }
+
+    const nextCount = Math.max(game.current_players - 1, 0);
+    const { error: updateError } = await supabase
+      .from("games")
+      .update({ current_players: nextCount })
+      .eq("id", game.id);
+
+    if (updateError) {
+      setJoinError(updateError.message);
+      setLeavingGameId(null);
+      return;
+    }
+
+    setJoinedGameIds((current) => current.filter((id) => id !== game.id));
+    setGames((current) =>
+      current.map((item) => (item.id === game.id ? { ...item, current_players: Math.max(item.current_players - 1, 0) } : item))
+    );
+    setLeavingGameId(null);
+  };
+
+  const handleCancelGame = async (game: GameRow) => {
+    if (!currentUserId || game.created_by !== currentUserId) {
+      return;
+    }
+
+    const confirmed = window.confirm("Cancel this game? Players will be notified.");
+    if (!confirmed) {
+      return;
+    }
+
+    setJoinError("");
+    const supabase = createSupabaseClient();
+    const { error } = await supabase
+      .from("games")
+      .update({ status: "cancelled" })
+      .eq("id", game.id);
+
+    if (error) {
+      setJoinError(error.message);
+      return;
+    }
+
+    setGames((current) => current.map((item) => (item.id === game.id ? { ...item, status: "cancelled" } : item)));
+    setOpenMenuGameId(null);
   };
 
   const loadVenueCoordinates = async (venue: string) => {
@@ -376,7 +454,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             </Link>
             <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2]">
-                <SportIcon size={24} className="text-[#1D9E75]" aria-hidden="true" />
+                {createElement(sportHeaderIcon, { size: 24, className: "text-[#1D9E75]", "aria-hidden": true })}
               </div>
               <p className="text-base font-semibold text-slate-950">{sportLabel}</p>
             </div>
@@ -505,6 +583,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
               {games.length > 0 ? (
                 games.map((game) => {
+                  const isHost = currentUserId !== null && game.created_by === currentUserId;
+                  const isCancelled = game.status === "cancelled";
                   const joined = joinedGameIds.includes(game.id);
                   const spotsLeft = Math.max(game.max_players - game.current_players, 0);
                   const fewSpots = spotsLeft <= 3;
@@ -522,13 +602,52 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                     ? `https://waze.com/ul?ll=${geocodeState.lat},${geocodeState.lng}&navigate=yes`
                     : `https://waze.com/ul?q=${encodedVenue}`;
                   return (
-                    <div key={game.id} className="rounded-3xl border border-slate-200 bg-[#FBFEFC] p-4">
+                    <div key={game.id} className={`relative rounded-3xl border p-4 ${isCancelled ? "border-slate-300 bg-slate-100/80" : "border-slate-200 bg-[#FBFEFC]"}`}>
+                      {isHost && !isCancelled ? (
+                        <div className="absolute right-3 top-3 z-10">
+                          <button
+                            type="button"
+                            onClick={() => setOpenMenuGameId((current) => (current === game.id ? null : game.id))}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm border border-slate-200"
+                            aria-label="Game options"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                          {openMenuGameId === game.id ? (
+                            <div className="absolute right-0 mt-2 w-32 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuGameId(null);
+                                  router.push(`/games/${game.id}/edit`);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCancelGame(game)}
+                                className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                              >
+                                Cancel game
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-slate-950">{game.title}</p>
                           <p className="mt-1 text-xs text-slate-500">{game.sport}</p>
                         </div>
                         <div className="flex items-center gap-2">
+                          {isCancelled ? (
+                            <span className="rounded-full bg-red-100 px-3 py-1 text-[11px] font-semibold text-red-700">
+                              Cancelled
+                            </span>
+                          ) : null}
                           <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${fewSpots ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-700"}`}>
                             {spotsLeft} spots left
                           </span>
@@ -617,14 +736,36 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                         <span className="text-xs text-slate-500">
                           {game.current_players}/{game.max_players} players
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleJoin(game)}
-                          disabled={joined || joiningGameId === game.id}
-                          className="rounded-2xl bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          {joined ? "Joined" : joiningGameId === game.id ? "Joining..." : "Join"}
-                        </button>
+                        {isCancelled ? null : isHost ? (
+                          <span className="text-xs font-semibold text-[#1D9E75]">You are hosting</span>
+                        ) : joined ? (
+                          <div className="text-right">
+                            <button
+                              type="button"
+                              disabled
+                              className="rounded-2xl bg-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+                            >
+                              Joined
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleLeave(game)}
+                              disabled={leavingGameId === game.id}
+                              className="mt-2 block w-full text-xs font-semibold text-red-600 hover:underline disabled:opacity-60"
+                            >
+                              {leavingGameId === game.id ? "Leaving..." : "Leave game"}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleJoin(game)}
+                            disabled={joiningGameId === game.id}
+                            className="rounded-2xl bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {joiningGameId === game.id ? "Joining..." : "Join"}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

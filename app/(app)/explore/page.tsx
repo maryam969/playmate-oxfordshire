@@ -2,7 +2,9 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { MoreVertical } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { getSportIcon } from "@/lib/sport-icons";
 
@@ -23,6 +25,7 @@ type GameRow = {
   max_players: number;
   created_by: string | null;
   creator_name: string | null;
+  status: string | null;
 };
 type GeocodeState =
   | { status: 'idle' }
@@ -36,14 +39,18 @@ const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-ma
 });
 
 export default function ExplorePage() {
+  const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [games, setGames] = useState<GameRow[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
+  const [leavingGameId, setLeavingGameId] = useState<string | null>(null);
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
   const [expandedDetailsGameId, setExpandedDetailsGameId] = useState<string | null>(null);
+  const [openMenuGameId, setOpenMenuGameId] = useState<string | null>(null);
   const [geocodeByVenue, setGeocodeByVenue] = useState<Record<string, GeocodeState>>({});
   const [joinError, setJoinError] = useState("");
 
@@ -52,10 +59,23 @@ export default function ExplorePage() {
       const supabase = createSupabaseClient();
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
+      setCurrentUserId(user?.id ?? null);
+
+      let joinedIds: string[] = [];
+      if (user) {
+        const { data: joinedData } = await supabase
+          .from("game_players")
+          .select("game_id")
+          .eq("user_id", user.id);
+
+        joinedIds = (joinedData ?? []).map((row) => row.game_id);
+        setJoinedGameIds(joinedIds);
+      }
 
       const result = await supabase
         .from("games")
-        .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by")
+        .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
+        .neq("status", "cancelled")
         .order("date", { ascending: true });
 
       if (result.error) {
@@ -66,13 +86,18 @@ export default function ExplorePage() {
 
       const gameRows = (result.data ?? []) as GameRow[];
 
-      if (user) {
-        const { data: joinedData } = await supabase
-          .from("game_players")
-          .select("game_id")
-          .eq("user_id", user.id);
+      if (user && joinedIds.length > 0) {
+        const { data: cancelledJoinedGames } = await supabase
+          .from("games")
+          .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
+          .eq("status", "cancelled")
+          .in("id", joinedIds);
 
-        setJoinedGameIds((joinedData ?? []).map((row) => row.game_id));
+        const merged = [...gameRows, ...((cancelledJoinedGames ?? []) as GameRow[])];
+        const deduped = Array.from(new Map(merged.map((game) => [game.id, game])).values());
+        setGames(deduped);
+        setLoading(false);
+        return;
       }
 
       setGames(gameRows);
@@ -136,6 +161,77 @@ export default function ExplorePage() {
       current.map((item) => (item.id === game.id ? { ...item, current_players: item.current_players + 1 } : item))
     );
     setJoiningGameId(null);
+  };
+
+  const handleLeave = async (game: GameRow) => {
+    if (!currentUserId || game.created_by === currentUserId) {
+      return;
+    }
+
+    const confirmed = window.confirm("Leave this game?");
+    if (!confirmed) {
+      return;
+    }
+
+    setLeavingGameId(game.id);
+    setJoinError("");
+
+    const supabase = createSupabaseClient();
+    const { error: deleteError } = await supabase
+      .from("game_players")
+      .delete()
+      .eq("game_id", game.id)
+      .eq("user_id", currentUserId);
+
+    if (deleteError) {
+      setJoinError(deleteError.message);
+      setLeavingGameId(null);
+      return;
+    }
+
+    const nextCount = Math.max(game.current_players - 1, 0);
+    const { error: updateError } = await supabase
+      .from("games")
+      .update({ current_players: nextCount })
+      .eq("id", game.id);
+
+    if (updateError) {
+      setJoinError(updateError.message);
+      setLeavingGameId(null);
+      return;
+    }
+
+    setJoinedGameIds((current) => current.filter((id) => id !== game.id));
+    setGames((current) =>
+      current.map((item) => (item.id === game.id ? { ...item, current_players: Math.max(item.current_players - 1, 0) } : item))
+    );
+    setLeavingGameId(null);
+  };
+
+  const handleCancelGame = async (game: GameRow) => {
+    if (!currentUserId || game.created_by !== currentUserId) {
+      return;
+    }
+
+    const confirmed = window.confirm("Cancel this game? Players will be notified.");
+    if (!confirmed) {
+      return;
+    }
+
+    setJoinError("");
+    const supabase = createSupabaseClient();
+    const { error } = await supabase
+      .from("games")
+      .update({ status: "cancelled" })
+      .eq("id", game.id);
+
+    if (error) {
+      setJoinError(error.message);
+      return;
+    }
+
+    setGames((current) => current.map((item) => (item.id === game.id ? { ...item, status: "cancelled" } : item)));
+    setOpenMenuGameId(null);
   };
 
   const loadVenueCoordinates = async (venue: string) => {
@@ -230,6 +326,8 @@ export default function ExplorePage() {
             </div>
           ) : filteredGames.length > 0 ? (
             filteredGames.map((game) => {
+              const isHost = currentUserId !== null && game.created_by === currentUserId;
+              const isCancelled = game.status === "cancelled";
               const joined = joinedGameIds.includes(game.id);
               const spotsLeft = Math.max(game.max_players - game.current_players, 0);
               const fewSpots = spotsLeft <= 3;
@@ -252,8 +350,44 @@ export default function ExplorePage() {
               return (
                 <div
                   key={game.id}
-                  className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className={`relative rounded-3xl border p-4 shadow-sm ${
+                    isCancelled ? "border-slate-300 bg-slate-100/80" : "border-slate-200 bg-white"
+                  }`}
                 >
+                  {isHost && !isCancelled ? (
+                    <div className="absolute right-3 top-3 z-10">
+                      <button
+                        type="button"
+                        onClick={() => setOpenMenuGameId((current) => (current === game.id ? null : game.id))}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm border border-slate-200"
+                        aria-label="Game options"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                      {openMenuGameId === game.id ? (
+                        <div className="absolute right-0 mt-2 w-32 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenMenuGameId(null);
+                              router.push(`/games/${game.id}/edit`);
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelGame(game)}
+                            className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                          >
+                            Cancel game
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ECFDF5]">
@@ -265,6 +399,11 @@ export default function ExplorePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {isCancelled ? (
+                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                          Cancelled
+                        </span>
+                      ) : null}
                       <span className={`rounded-full px-3 py-1 text-xs font-semibold ${fewSpots ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-700"}`}>
                         {spotsLeft} spots left
                       </span>
@@ -345,17 +484,39 @@ export default function ExplorePage() {
                     <div className="text-sm text-slate-500">
                       {game.current_players}/{game.max_players} players
                     </div>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleJoin(game);
-                      }}
-                      disabled={joined || joiningGameId === game.id}
-                      className="rounded-full bg-[#1D9E75] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {joined ? "Joined" : joiningGameId === game.id ? "Joining..." : "Join"}
-                    </button>
+                    {isCancelled ? null : isHost ? (
+                      <span className="text-xs font-semibold text-[#1D9E75]">You are hosting</span>
+                    ) : joined ? (
+                      <div className="text-right">
+                        <button
+                          type="button"
+                          disabled
+                          className="rounded-full bg-slate-300 px-5 py-2 text-sm font-semibold text-slate-700"
+                        >
+                          Joined
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleLeave(game)}
+                          disabled={leavingGameId === game.id}
+                          className="mt-2 block w-full text-xs font-semibold text-red-600 hover:underline disabled:opacity-60"
+                        >
+                          {leavingGameId === game.id ? "Leaving..." : "Leave game"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleJoin(game);
+                        }}
+                        disabled={joiningGameId === game.id}
+                        className="rounded-full bg-[#1D9E75] px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {joiningGameId === game.id ? "Joining..." : "Join"}
+                      </button>
+                    )}
                   </div>
 
                   {expandedGameId === game.id ? (
