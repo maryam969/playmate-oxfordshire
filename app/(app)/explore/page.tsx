@@ -4,16 +4,9 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
+import { getSportIcon } from "@/lib/sport-icons";
 
 const filters = ["All", "Football", "Tennis", "Basketball", "Badminton", "Padel"];
-
-const emojiBySport: Record<string, string> = {
-  Football: "⚽",
-  Tennis: "🎾",
-  Basketball: "🏀",
-  Badminton: "🏸",
-  Padel: "🥎",
-};
 
 type GameRow = {
   id: string;
@@ -242,6 +235,7 @@ export default function ExplorePage() {
               const fewSpots = spotsLeft <= 3;
               const hostName = game.creator_name || "Unknown Host";
               const hostInitial = hostName.trim() ? hostName.trim().charAt(0).toUpperCase() : "U";
+              const SportIcon = getSportIcon(game.sport);
               const geocodeState = geocodeByVenue[game.venue];
               const hasDescription = Boolean(game.description?.trim());
               const encodedVenue = encodeURIComponent(`${game.venue}, Oxford`);
@@ -262,8 +256,8 @@ export default function ExplorePage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
-                        {emojiBySport[game.sport] ?? "🎉"}
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ECFDF5]">
+                        <SportIcon size={24} className="text-[#1D9E75]" aria-hidden="true" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-slate-950">{game.title}</p>

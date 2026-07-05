@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
+import { getSportIcon } from "@/lib/sport-icons";
 
 type ChatMessage = {
   id: string;
@@ -37,14 +38,6 @@ type GeocodeState =
   | { status: "error" }
   | { status: "success"; lat: number; lng: number };
 
-const sportIcons: Record<string, string> = {
-  football: "⚽",
-  tennis: "🎾",
-  basketball: "🏀",
-  badminton: "🏸",
-  padel: "🥎",
-};
-
 const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
   ssr: false,
   loading: () => <p className="text-xs text-slate-500">Loading map...</p>,
@@ -68,7 +61,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
-  const sportIcon = sportIcons[sport.toLowerCase()] || "⚽";
+  const SportIcon = getSportIcon(sport);
 
   useEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
@@ -382,8 +375,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
               ←
             </Link>
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2] text-lg">
-                {sportIcon}
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2]">
+                <SportIcon size={24} className="text-[#1D9E75]" aria-hidden="true" />
               </div>
               <p className="text-base font-semibold text-slate-950">{sportLabel}</p>
             </div>
