@@ -330,7 +330,6 @@ export default function ExplorePage() {
               const isCancelled = game.status === "cancelled";
               const joined = joinedGameIds.includes(game.id);
               const spotsLeft = Math.max(game.max_players - game.current_players, 0);
-              const fewSpots = spotsLeft <= 3;
               const hostName = game.creator_name || "Unknown Host";
               const hostInitial = hostName.trim() ? hostName.trim().charAt(0).toUpperCase() : "U";
               const SportIcon = getSportIcon(game.sport);
@@ -350,80 +349,82 @@ export default function ExplorePage() {
               return (
                 <div
                   key={game.id}
-                  className={`relative rounded-3xl border p-4 shadow-sm ${
+                  className={`rounded-3xl border p-4 shadow-sm space-y-3 ${
                     isCancelled ? "border-slate-300 bg-slate-100/80" : "border-slate-200 bg-white"
                   }`}
                 >
-                  {isHost && !isCancelled ? (
-                    <div className="absolute right-3 top-3 z-10">
-                      <button
-                        type="button"
-                        onClick={() => setOpenMenuGameId((current) => (current === game.id ? null : game.id))}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm border border-slate-200"
-                        aria-label="Game options"
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                      {openMenuGameId === game.id ? (
-                        <div className="absolute right-0 mt-2 w-32 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ECFDF5]">
+                        <SportIcon size={24} className="text-[#1D9E75]" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-950">{game.title}</p>
+                        <p className="text-xs text-slate-500">{game.sport}</p>
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      {isHost && !isCancelled ? (
+                        <div className="relative z-10">
                           <button
                             type="button"
-                            onClick={() => {
-                              setOpenMenuGameId(null);
-                              router.push(`/games/${game.id}/edit`);
-                            }}
-                            className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            onClick={() => setOpenMenuGameId((current) => (current === game.id ? null : game.id))}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm"
+                            aria-label="Game options"
                           >
-                            Edit
+                            <MoreVertical size={16} />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCancelGame(game)}
-                            className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                          >
-                            Cancel game
-                          </button>
+                          {openMenuGameId === game.id ? (
+                            <div className="absolute right-0 mt-2 w-32 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuGameId(null);
+                                  router.push(`/games/${game.id}/edit`);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCancelGame(game)}
+                                className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                              >
+                                Cancel game
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
-                  ) : null}
-
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ECFDF5]">
-                        <SportIcon size={24} className="text-[#1D9E75]" aria-hidden="true" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">{game.title}</p>
-                        <p className="mt-1 text-xs text-slate-500">{game.sport}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isCancelled ? (
-                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                          Cancelled
-                        </span>
-                      ) : null}
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${fewSpots ? "bg-orange-100 text-orange-700" : "bg-emerald-100 text-emerald-700"}`}>
-                        {spotsLeft} spots left
-                      </span>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          game.is_booked ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {game.is_booked ? "Pitch booked ✓" : "Pitch not booked yet"}
-                      </span>
-                    </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      {spotsLeft} spots left
+                    </span>
+                    <span
+                      className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
+                        game.is_booked ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {game.is_booked ? "Pitch booked ✓" : "Pitch not booked yet"}
+                    </span>
+                    {isCancelled ? (
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                        Cancelled
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-sm text-slate-600">
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">📅 {game.date}</span>
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">🕐 {game.start_time}</span>
                     <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">📍 {game.venue}</span>
                   </div>
 
-                  <div className="mt-2 flex items-center gap-4">
+                  <div className="flex items-center gap-4">
                     <button
                       type="button"
                       onClick={() => handleMapToggle(game)}
@@ -446,12 +447,12 @@ export default function ExplorePage() {
                   </div>
 
                   {hasDescription && expandedDetailsGameId === game.id ? (
-                    <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                    <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
                       {game.description}
                     </div>
                   ) : null}
 
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500">Directions:</span>
                     <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#1D9E75] hover:underline">
                       Google Maps
@@ -465,12 +466,12 @@ export default function ExplorePage() {
                   </div>
 
                   {game.pitch_cost > 0 ? (
-                    <p className="mt-3 text-sm text-slate-600">
+                    <p className="text-sm text-slate-600">
                       £{game.pitch_cost} total · £{(game.pitch_cost / game.max_players).toFixed(2)} each
                     </p>
                   ) : null}
 
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <div
                       title={hostName}
                       className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1D9E75] text-[10px] font-semibold text-white"
@@ -480,7 +481,7 @@ export default function ExplorePage() {
                     <p className="text-xs text-slate-600">Hosted by {hostName}</p>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="text-sm text-slate-500">
                       {game.current_players}/{game.max_players} players
                     </div>
@@ -520,7 +521,7 @@ export default function ExplorePage() {
                   </div>
 
                   {expandedGameId === game.id ? (
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
                       {geocodeState?.status === "loading" ? (
                         <p className="px-2 py-4 text-sm text-slate-500">Finding location...</p>
                       ) : geocodeState?.status === "success" ? (
