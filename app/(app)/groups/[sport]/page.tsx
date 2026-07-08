@@ -653,7 +653,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                 const avatarIndex = (message.sender_name || "").split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % avatarColors.length;
                 const avatarBg = avatarColors[avatarIndex];
                 return (
-                  <div key={message.id} className={`${isOwn ? "flex items-end justify-end gap-2" : "flex items-end gap-2"}`}>
+                  <div key={message.id} className={`${isOwn ? "flex items-end justify-end gap-2" : "flex items-start gap-2 justify-start"}`}>
                     {isOwn ? (
                       <button
                         type="button"
@@ -681,7 +681,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-end gap-2">
+                      <>
                         {userAvatars[message.user_id] ? (
                           <img src={userAvatars[message.user_id]} alt={message.sender_name} className="h-9 w-9 rounded-full object-cover" />
                         ) : (
@@ -689,18 +689,18 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                             {initials}
                           </div>
                         )}
-                        <div className="max-w-[75%]">
-                          <div className="mb-1 text-[12px] font-medium text-slate-500">{message.sender_name}</div>
-                          <div className="inline-block max-w-[75%] rounded-2xl rounded-tl-md bg-slate-100 px-4 py-2 text-slate-800">
+                        <div className="flex flex-col items-start">
+                          <span className="mb-1 text-xs text-slate-500">{message.sender_name}</span>
+                          <div className="inline-block max-w-[75%] rounded-2xl rounded-tl-md bg-slate-200 px-4 py-2 text-slate-800 break-words">
                             {message.reply_to_content ? (
-                              <div className="mb-2 rounded-lg border-l-2 border-slate-300 bg-slate-200/70 px-2 py-1">
+                              <div className="mb-2 rounded-lg border-l-2 border-slate-300 bg-slate-100 px-2 py-1">
                                 <p className="text-[11px] font-semibold text-[#1D9E75]">{message.reply_to_sender}</p>
-                                <p className="text-[11px] text-slate-600 truncate">{message.reply_to_content}</p>
+                                <p className="truncate text-[11px] text-slate-600">{message.reply_to_content}</p>
                               </div>
                             ) : null}
                             <p className="text-sm text-slate-800">{message.content}</p>
                           </div>
-                          <div className="mt-1 flex items-center gap-2 pl-1">
+                          <div className="mt-1 flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => setReplyingTo(message)}
@@ -712,10 +712,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                                 <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
                               </svg>
                             </button>
-                            <p className="text-[11px] text-slate-400">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+                            <span className="text-xs text-slate-400">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
                           </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
                 );
