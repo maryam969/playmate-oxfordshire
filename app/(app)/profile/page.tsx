@@ -4,13 +4,16 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createSupabaseClient } from "@/lib/supabase";
 import { ChevronRight } from "lucide-react";
+import { IoFootballOutline, IoTennisballOutline, IoBasketballOutline } from "react-icons/io5";
+import { GiShuttlecock } from "react-icons/gi";
+import { MdSportsTennis } from "react-icons/md";
 
 const sportOptions = [
-  { emoji: "⚽", label: "Football" },
-  { emoji: "🎾", label: "Tennis" },
-  { emoji: "🏀", label: "Basketball" },
-  { emoji: "🏸", label: "Badminton" },
-  { emoji: "🥎", label: "Padel" },
+  { icon: IoFootballOutline, label: "Football" },
+  { icon: IoTennisballOutline, label: "Tennis" },
+  { icon: IoBasketballOutline, label: "Basketball" },
+  { icon: GiShuttlecock, label: "Badminton" },
+  { icon: MdSportsTennis, label: "Padel" },
 ];
 
 export default function ProfilePage() {
@@ -68,7 +71,7 @@ export default function ProfilePage() {
         setFirstName(profileData.first_name ?? metadataFirstName);
         setLastName(profileData.last_name ?? metadataLastName);
         setLocation(profileData.location ?? "");
-        setSelectedSports(profileData.sports ?? []);
+        setSelectedSports(Array.isArray(profileData.sports) ? profileData.sports : []);
         setSkillLevel(profileData.skill_level ?? "");
         setProfileImage(profileData.avatar_url ?? null);
       } else {
@@ -193,7 +196,7 @@ export default function ProfilePage() {
     }
 
     setToastType("success");
-    setToastMessage("Profile updated successfully");
+    setToastMessage("Profile saved ✓");
     setShowToast(true);
     window.setTimeout(() => setShowToast(false), 3000);
   };
@@ -212,7 +215,7 @@ export default function ProfilePage() {
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1D9E75] to-[#0F6E56] p-5 text-white shadow-xl shadow-[#0F6E75]/15">
+        <section className="overflow-hidden rounded-[28px] bg-gradient-to-br from-[#1D9E75] to-[#0F6E56] p-5 text-white shadow-xl shadow-[#0F6E56]/15">
           <div className="flex items-start gap-4">
             <button
               type="button"
@@ -244,14 +247,18 @@ export default function ProfilePage() {
               <p className="mt-1 text-sm text-white/80">{location || "Add your location"}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {selectedSports.length > 0 ? (
-                  selectedSports.map((sport) => (
-                    <span
-                      key={sport}
-                      className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white"
-                    >
-                      {sportOptions.find((option) => option.label === sport)?.emoji ?? "🏅"} {sport}
-                    </span>
-                  ))
+                  selectedSports.map((sport) => {
+                    const SportIcon = sportOptions.find((option) => option.label === sport)?.icon;
+                    return (
+                      <span
+                        key={sport}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white"
+                      >
+                        {SportIcon ? <SportIcon size={16} className="text-white" /> : null}
+                        <span>{sport}</span>
+                      </span>
+                    );
+                  })
                 ) : (
                   <span className="rounded-full border border-white/20 bg-white/15 px-3 py-1 text-xs font-semibold text-white">
                     Add your sports
@@ -308,6 +315,7 @@ export default function ProfilePage() {
             <div className="flex flex-wrap gap-2">
               {sportOptions.map((sport) => {
                 const active = selectedSports.includes(sport.label);
+                const SportIcon = sport.icon;
                 return (
                   <button
                     key={sport.label}
@@ -320,7 +328,7 @@ export default function ProfilePage() {
                     }`}
                   >
                     {active && <span>✓</span>}
-                    <span>{sport.emoji}</span>
+                    <SportIcon size={20} className="text-[#1D9E75]" />
                     <span>{sport.label}</span>
                   </button>
                 );
