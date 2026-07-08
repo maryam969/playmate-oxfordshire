@@ -669,7 +669,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                     ) : null}
                     {isOwn ? (
                       <div className="max-w-[75%] text-right">
-                        <div className="inline-block max-w-[75%] rounded-2xl rounded-tr-md bg-[#1D9E75] px-4 py-2 text-white">
+                        <div className="ml-auto w-fit max-w-[75%] rounded-2xl rounded-tr-md bg-[#1D9E75] px-4 py-2 text-white whitespace-pre-wrap break-normal">
                           {message.reply_to_content ? (
                             <div className="mb-2 rounded-lg border-l-2 border-white/70 bg-white/15 px-2 py-1 text-left">
                               <p className="text-[11px] font-semibold text-white/90">{message.reply_to_sender}</p>
@@ -689,9 +689,9 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                             {initials}
                           </div>
                         )}
-                        <div className="flex flex-col items-start">
+                        <div className="flex flex-col items-start min-w-0">
                           <span className="mb-1 text-xs text-slate-500">{message.sender_name}</span>
-                          <div className="inline-block max-w-[75%] rounded-2xl rounded-tl-md bg-slate-200 px-4 py-2 text-slate-800 break-words">
+                          <div className="w-fit max-w-[75%] rounded-2xl rounded-tl-md bg-slate-200 px-4 py-2 text-slate-800 whitespace-pre-wrap break-normal">
                             {message.reply_to_content ? (
                               <div className="mb-2 rounded-lg border-l-2 border-slate-300 bg-slate-100 px-2 py-1">
                                 <p className="text-[11px] font-semibold text-[#1D9E75]">{message.reply_to_sender}</p>
