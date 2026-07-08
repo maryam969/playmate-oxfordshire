@@ -42,7 +42,13 @@ type GeocodeState =
   | { status: "error" }
   | { status: "success"; lat: number; lng: number };
 
-const fortyEightHoursInMs = 48 * 60 * 60 * 1000;
+type WaitlistRow = {
+  game_id: string;
+  user_id: string;
+  user_name: string | null;
+};
+
+const joiningCutoffInMs = 24 * 60 * 60 * 1000;
 
 const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
   ssr: false,
@@ -60,8 +66,11 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [currentUserName, setCurrentUserName] = useState("");
   const [games, setGames] = useState<GameRow[]>([]);
   const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
+  const [waitlistedGameIds, setWaitlistedGameIds] = useState<string[]>([]);
+  const [waitlistCounts, setWaitlistCounts] = useState<Record<string, number>>({});
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null);
   const [leavingGameId, setLeavingGameId] = useState<string | null>(null);
+  const [waitlistActionGameId, setWaitlistActionGameId] = useState<string | null>(null);
   const [joinError, setJoinError] = useState("");
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
   const [expandedDetailsGameId, setExpandedDetailsGameId] = useState<string | null>(null);
@@ -178,6 +187,31 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           .eq("user_id", userData.user.id);
 
         setJoinedGameIds((joinedData ?? []).map((row) => row.game_id));
+
+        if (gamesData && gamesData.length > 0) {
+          const { data: waitlistData } = await supabase
+            .from("game_waitlist")
+            .select("game_id, user_id, user_name")
+            .in("game_id", gamesData.map((game) => game.id));
+
+          const counts: Record<string, number> = {};
+          const userWaitlistIds: string[] = [];
+          (waitlistData ?? []).forEach((row: WaitlistRow) => {
+            counts[row.game_id] = (counts[row.game_id] ?? 0) + 1;
+            if (row.user_id === userData.user.id) {
+              userWaitlistIds.push(row.game_id);
+            }
+          });
+
+          setWaitlistCounts(counts);
+          setWaitlistedGameIds(userWaitlistIds);
+        } else {
+          setWaitlistCounts({});
+          setWaitlistedGameIds([]);
+        }
+      } else {
+        setWaitlistCounts({});
+        setWaitlistedGameIds([]);
       }
     };
 
@@ -306,7 +340,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     }
 
     const gameStart = new Date(`${game.date}T${game.start_time}`);
-    if (!Number.isFinite(gameStart.getTime()) || gameStart.getTime() - now < fortyEightHoursInMs) {
+    if (!Number.isFinite(gameStart.getTime()) || gameStart.getTime() - now < joiningCutoffInMs) {
       return;
     }
 
@@ -343,6 +377,69 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     setJoiningGameId(null);
   };
 
+  const handleJoinWaitlist = async (game: GameRow) => {
+    if (!currentUserId || joinedGameIds.includes(game.id) || waitlistedGameIds.includes(game.id) || game.created_by === currentUserId || game.status === "cancelled") {
+      return;
+    }
+
+    const gameStart = new Date(`${game.date}T${game.start_time}`);
+    if (!Number.isFinite(gameStart.getTime()) || gameStart.getTime() - now < joiningCutoffInMs) {
+      return;
+    }
+
+    setWaitlistActionGameId(game.id);
+    setJoinError("");
+
+    const supabase = createSupabaseClient();
+    const { error: waitlistError } = await supabase.from("game_waitlist").insert({
+      game_id: game.id,
+      user_id: currentUserId,
+      user_name: currentUserName || "User",
+    });
+
+    if (waitlistError) {
+      setJoinError(waitlistError.message);
+      setWaitlistActionGameId(null);
+      return;
+    }
+
+    setWaitlistedGameIds((current) => [...current, game.id]);
+    setWaitlistCounts((current) => ({
+      ...current,
+      [game.id]: (current[game.id] ?? 0) + 1,
+    }));
+    setWaitlistActionGameId(null);
+  };
+
+  const handleLeaveWaitlist = async (game: GameRow) => {
+    if (!currentUserId || !waitlistedGameIds.includes(game.id)) {
+      return;
+    }
+
+    setWaitlistActionGameId(game.id);
+    setJoinError("");
+
+    const supabase = createSupabaseClient();
+    const { error: waitlistError } = await supabase
+      .from("game_waitlist")
+      .delete()
+      .eq("game_id", game.id)
+      .eq("user_id", currentUserId);
+
+    if (waitlistError) {
+      setJoinError(waitlistError.message);
+      setWaitlistActionGameId(null);
+      return;
+    }
+
+    setWaitlistedGameIds((current) => current.filter((id) => id !== game.id));
+    setWaitlistCounts((current) => ({
+      ...current,
+      [game.id]: Math.max((current[game.id] ?? 0) - 1, 0),
+    }));
+    setWaitlistActionGameId(null);
+  };
+
   const handleLeave = async (game: GameRow) => {
     if (!currentUserId || game.created_by === currentUserId) {
       return;
@@ -369,7 +466,47 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       return;
     }
 
-    const nextCount = Math.max(game.current_players - 1, 0);
+    let nextCount = Math.max(game.current_players - 1, 0);
+
+    const { data: waitlistData, error: waitlistFetchError } = await supabase
+      .from("game_waitlist")
+      .select("game_id, user_id, user_name")
+      .eq("game_id", game.id)
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+    if (waitlistFetchError) {
+      console.error("Failed to load waitlist:", waitlistFetchError.message);
+    }
+
+    const firstWaitlistEntry = waitlistData?.[0] as WaitlistRow | undefined;
+    if (firstWaitlistEntry) {
+      const { error: promoteError } = await supabase.from("game_players").insert({
+        game_id: game.id,
+        user_id: firstWaitlistEntry.user_id,
+      });
+
+      if (promoteError) {
+        console.error("Failed to promote waitlisted player:", promoteError.message);
+      } else {
+        const { error: removeWaitlistError } = await supabase
+          .from("game_waitlist")
+          .delete()
+          .eq("game_id", game.id)
+          .eq("user_id", firstWaitlistEntry.user_id);
+
+        if (removeWaitlistError) {
+          console.error("Failed to remove waitlist entry:", removeWaitlistError.message);
+        }
+
+        nextCount = game.current_players;
+        setWaitlistCounts((current) => ({
+          ...current,
+          [game.id]: Math.max((current[game.id] ?? 0) - 1, 0),
+        }));
+      }
+    }
+
     const { error: updateError } = await supabase
       .from("games")
       .update({ current_players: nextCount })
@@ -616,7 +753,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                     : `https://waze.com/ul?q=${encodedVenue}`;
                   const gameStart = new Date(`${game.date}T${game.start_time}`);
                   const hoursUntilGame = (gameStart.getTime() - now) / (1000 * 60 * 60);
-                  const joiningClosed = !Number.isFinite(hoursUntilGame) || hoursUntilGame < 48;
+                  const joiningClosed = !Number.isFinite(hoursUntilGame) || hoursUntilGame < 24;
+                  const full = game.current_players >= game.max_players;
+                  const waitlistCount = waitlistCounts[game.id] ?? 0;
+                  const waitlisted = waitlistedGameIds.includes(game.id);
                   return (
                     <div key={game.id} className={`rounded-3xl border p-4 space-y-3 ${isCancelled ? "border-slate-300 bg-slate-100/80" : "border-slate-200 bg-[#FBFEFC]"}`}>
                       <div className="flex items-start justify-between gap-3">
@@ -759,7 +899,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs text-slate-500">
-                          {game.current_players}/{game.max_players} players
+                          {game.current_players}/{game.max_players} players{full ? ` · ${waitlistCount} on waitlist` : ""}
                         </span>
                         {isCancelled ? null : isHost ? (
                           <span className="text-xs font-semibold text-[#1D9E75]">You are hosting</span>
@@ -781,6 +921,52 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                               {leavingGameId === game.id ? "Leaving..." : "Leave game"}
                             </button>
                           </div>
+                        ) : full ? (
+                          waitlisted ? (
+                            <div className="text-right">
+                              <button
+                                type="button"
+                                disabled
+                                className="rounded-2xl bg-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+                              >
+                                On waitlist
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleLeaveWaitlist(game)}
+                                disabled={waitlistActionGameId === game.id}
+                                className="mt-2 block w-full text-xs font-semibold text-red-600 hover:underline disabled:opacity-60"
+                              >
+                                {waitlistActionGameId === game.id ? "Leaving..." : "Leave waitlist"}
+                              </button>
+                            </div>
+                          ) : joiningClosed ? (
+                            <div className="text-right">
+                              <button
+                                type="button"
+                                disabled
+                                className="rounded-2xl bg-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+                              >
+                                Joining closed
+                              </button>
+                              <p className="mt-2 text-xs text-slate-500">Joining closes 24 hours before the game</p>
+                            </div>
+                          ) : (
+                            <div className="text-right">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleJoinWaitlist(game);
+                                }}
+                                disabled={waitlistActionGameId === game.id}
+                                className="rounded-2xl bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {waitlistActionGameId === game.id ? "Joining..." : "Join waitlist"}
+                              </button>
+                              <p className="mt-2 text-xs text-slate-500">{waitlistCount} on waitlist</p>
+                            </div>
+                          )
                         ) : joiningClosed ? (
                           <div className="text-right">
                             <button
@@ -790,7 +976,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                             >
                               Joining closed
                             </button>
-                            <p className="mt-2 text-xs text-slate-500">Joining closes 48 hours before the game</p>
+                            <p className="mt-2 text-xs text-slate-500">Joining closes 24 hours before the game</p>
                           </div>
                         ) : (
                           <button
