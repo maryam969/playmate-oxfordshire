@@ -652,70 +652,68 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                 const avatarColors = ["bg-violet-500", "bg-blue-500", "bg-orange-500", "bg-rose-500", "bg-cyan-500"];
                 const avatarIndex = (message.sender_name || "").split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % avatarColors.length;
                 const avatarBg = avatarColors[avatarIndex];
+                const formattedTime = new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
                 return (
-                  <div key={message.id} className={`${isOwn ? "flex items-end justify-end gap-2" : "flex items-start gap-2 justify-start"}`}>
+                  <div key={message.id} className={`flex w-full mb-3 ${isOwn ? "justify-end" : "justify-start"}`}>
                     {isOwn ? (
-                      <button
-                        type="button"
-                        onClick={() => setReplyingTo(message)}
-                        className="text-slate-400 hover:text-slate-600 p-1"
-                        title="Reply"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="9 17 4 12 9 7"></polyline>
-                          <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-                        </svg>
-                      </button>
-                    ) : null}
-                    {isOwn ? (
-                      <div className="max-w-[75%] text-right">
-                        <div className="ml-auto w-fit max-w-[75%] rounded-2xl rounded-tr-md bg-[#1D9E75] px-4 py-2 text-white whitespace-pre-wrap break-normal">
-                          {message.reply_to_content ? (
-                            <div className="mb-2 rounded-lg border-l-2 border-white/70 bg-white/15 px-2 py-1 text-left">
-                              <p className="text-[11px] font-semibold text-white/90">{message.reply_to_sender}</p>
-                              <p className="truncate text-[11px] text-white/80">{message.reply_to_content}</p>
+                      <div className="flex items-end gap-1 max-w-[80%]">
+                        <button
+                          type="button"
+                          onClick={() => setReplyingTo(message)}
+                          className="text-slate-400 hover:text-slate-600 p-1 shrink-0"
+                          title="Reply"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="9 17 4 12 9 7"></polyline>
+                            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                          </svg>
+                        </button>
+                        <div className="min-w-0 rounded-2xl rounded-tr-md bg-[#1D9E75] px-3 py-2 text-white">
+                          {message.reply_to_content && (
+                            <div className="mb-1 rounded-lg bg-white/20 px-2 py-1 border-l-2 border-white/70">
+                              <p className="text-[11px] font-semibold text-white/90 truncate">{message.reply_to_sender}</p>
+                              <p className="text-[11px] text-white/80 truncate">{message.reply_to_content}</p>
                             </div>
-                          ) : null}
-                          <p className="text-sm text-white">{message.content}</p>
-                          <p className="mt-1 text-right text-[11px] text-white/75">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p>
+                          )}
+                          <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{message.content}</p>
+                          <p className="mt-1 text-[10px] text-white/70 text-right">{formattedTime}</p>
                         </div>
                       </div>
                     ) : (
-                      <>
+                      <div className="flex items-end gap-2 max-w-[80%]">
                         {userAvatars[message.user_id] ? (
-                          <img src={userAvatars[message.user_id]} alt={message.sender_name} className="h-9 w-9 rounded-full object-cover" />
+                          <img src={userAvatars[message.user_id]} alt={message.sender_name} className="h-7 w-7 rounded-full object-cover shrink-0" />
                         ) : (
-                          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarBg} text-sm font-bold text-white`}>
+                          <div className={`flex h-7 w-7 items-center justify-center rounded-full ${avatarBg} text-[10px] font-bold text-white shrink-0`}>
                             {initials}
                           </div>
                         )}
-                        <div className="flex flex-col items-start min-w-0">
-                          <span className="mb-1 text-xs text-slate-500">{message.sender_name}</span>
-                          <div className="w-fit max-w-[75%] rounded-2xl rounded-tl-md bg-slate-200 px-4 py-2 text-slate-800 whitespace-pre-wrap break-normal">
-                            {message.reply_to_content ? (
-                              <div className="mb-2 rounded-lg border-l-2 border-slate-300 bg-slate-100 px-2 py-1">
-                                <p className="text-[11px] font-semibold text-[#1D9E75]">{message.reply_to_sender}</p>
-                                <p className="truncate text-[11px] text-slate-600">{message.reply_to_content}</p>
+                        <div className="min-w-0">
+                          <p className="mb-1 text-xs text-slate-500">{message.sender_name}</p>
+                          <div className="min-w-0 rounded-2xl rounded-tl-md bg-slate-200 px-3 py-2 text-slate-800">
+                            {message.reply_to_content && (
+                              <div className="mb-1 rounded-lg bg-black/5 px-2 py-1 border-l-2 border-[#1D9E75]">
+                                <p className="text-[11px] font-semibold text-[#1D9E75] truncate">{message.reply_to_sender}</p>
+                                <p className="text-[11px] text-slate-600 truncate">{message.reply_to_content}</p>
                               </div>
-                            ) : null}
-                            <p className="text-sm text-slate-800">{message.content}</p>
-                          </div>
-                          <div className="mt-1 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setReplyingTo(message)}
-                              className="text-slate-400 hover:text-slate-600"
-                              title="Reply"
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="9 17 4 12 9 7"></polyline>
-                                <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-                              </svg>
-                            </button>
-                            <span className="text-xs text-slate-400">{new Date(message.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+                            )}
+                            <p className="whitespace-pre-wrap break-words text-[15px] leading-snug">{message.content}</p>
+                            <p className="mt-1 text-[10px] text-slate-400">{formattedTime}</p>
                           </div>
                         </div>
-                      </>
+                        <button
+                          type="button"
+                          onClick={() => setReplyingTo(message)}
+                          className="text-slate-400 hover:text-slate-600 p-1 shrink-0 mb-1"
+                          title="Reply"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="9 17 4 12 9 7"></polyline>
+                            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                          </svg>
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
