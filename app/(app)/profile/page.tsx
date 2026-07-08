@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createSupabaseClient } from "@/lib/supabase";
+import { ChevronRight } from "lucide-react";
 
 const sportOptions = [
   { emoji: "⚽", label: "Football" },
@@ -18,6 +19,10 @@ type RecentGame = {
   date: string; // ISO date or stored format
   sport: string;
   start_time?: string | null;
+};
+
+type GamePlayerRow = {
+  game_id: string;
 };
 
 export default function ProfilePage() {
@@ -100,7 +105,7 @@ export default function ProfilePage() {
       setGamesCreatedCount(createdCount ?? 0);
 
       const { data: gpRows } = await supabase.from("game_players").select("game_id").eq("user_id", data.user.id);
-      const gameIds = (gpRows ?? []).map((r: any) => r.game_id);
+      const gameIds = ((gpRows ?? []) as GamePlayerRow[]).map((row) => row.game_id);
 
       if (gameIds.length > 0) {
         const { data: recentRows } = await supabase
@@ -416,6 +421,13 @@ export default function ProfilePage() {
             Save Profile
           </button>
         </form>
+
+        <section className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+          <Link href="/guidelines" className="flex items-center justify-between gap-4 px-5 py-4 text-sm font-semibold text-slate-900 transition hover:bg-slate-50">
+            <span>Community Guidelines</span>
+            <ChevronRight size={18} className="text-slate-400" />
+          </Link>
+        </section>
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 text-sm font-semibold text-slate-900">Recent Games</div>

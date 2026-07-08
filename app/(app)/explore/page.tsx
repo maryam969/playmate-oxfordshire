@@ -33,6 +33,8 @@ type GeocodeState =
   | { status: 'error' }
   | { status: 'success'; lat: number; lng: number };
 
+const fortyEightHoursInMs = 48 * 60 * 60 * 1000;
+
 const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
   ssr: false,
   loading: () => <p className="text-xs text-slate-500">Loading map...</p>,
@@ -53,6 +55,12 @@ export default function ExplorePage() {
   const [openMenuGameId, setOpenMenuGameId] = useState<string | null>(null);
   const [geocodeByVenue, setGeocodeByVenue] = useState<Record<string, GeocodeState>>({});
   const [joinError, setJoinError] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const loadGames = async () => {
@@ -128,6 +136,11 @@ export default function ExplorePage() {
     }
 
     if (joinedGameIds.includes(game.id)) {
+      return;
+    }
+
+    const gameStart = new Date(`${game.date}T${game.start_time}`);
+    if (!Number.isFinite(gameStart.getTime()) || gameStart.getTime() - now < fortyEightHoursInMs) {
       return;
     }
 
@@ -346,6 +359,9 @@ export default function ExplorePage() {
               const wazeUrl = hasCoords
                 ? `https://waze.com/ul?ll=${geocodeState.lat},${geocodeState.lng}&navigate=yes`
                 : `https://waze.com/ul?q=${encodedVenue}`;
+              const gameStart = new Date(`${game.date}T${game.start_time}`);
+              const hoursUntilGame = (gameStart.getTime() - now) / (1000 * 60 * 60);
+              const joiningClosed = !Number.isFinite(hoursUntilGame) || hoursUntilGame < 48;
               return (
                 <div
                   key={game.id}
@@ -504,6 +520,17 @@ export default function ExplorePage() {
                         >
                           {leavingGameId === game.id ? "Leaving..." : "Leave game"}
                         </button>
+                      </div>
+                    ) : joiningClosed ? (
+                      <div className="text-right">
+                        <button
+                          type="button"
+                          disabled
+                          className="rounded-full bg-slate-300 px-5 py-2 text-sm font-semibold text-slate-700"
+                        >
+                          Joining closed
+                        </button>
+                        <p className="mt-2 text-xs text-slate-500">Joining closes 48 hours before the game</p>
                       </div>
                     ) : (
                       <button

@@ -147,6 +147,13 @@ export default function SignUpPage() {
             Continue with Google
           </button>
 
+          <p className="mt-5 text-center text-xs leading-5 text-slate-500">
+            By signing up you agree to our{' '}
+            <Link href="/guidelines" className="font-semibold text-[#1D9E75] hover:text-emerald-600">
+              Community Guidelines
+            </Link>
+          </p>
+
           <p className="mt-6 text-center text-sm text-slate-600">
             Already have an account?{' '}
             <Link href="/signin" className="font-semibold text-[#1D9E75] hover:text-emerald-600">

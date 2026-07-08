@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
 
@@ -51,10 +51,19 @@ const venues = [
 
 const timeOptions = ["09:00", "10:00", "11:00", "12:00", "14:00", "16:00", "18:00"];
 const durationOptions = ["45 min", "60 min", "90 min", "120 min"];
+const fortyEightHoursInMs = 48 * 60 * 60 * 1000;
+
+function getMinimumSelectableDate() {
+  const date = new Date();
+  date.setTime(date.getTime() + fortyEightHoursInMs);
+  return date;
+}
 
 function getDateOptions() {
+  const minimumSelectableDate = getMinimumSelectableDate();
+
   return Array.from({ length: 7 }).map((_, index) => {
-    const date = new Date();
+    const date = new Date(minimumSelectableDate);
     date.setDate(date.getDate() + index);
     const day = date.toLocaleDateString("en-GB", { weekday: "short" });
     const dayNum = date.getDate();
@@ -72,7 +81,7 @@ export default function CreateGamePage() {
   const router = useRouter();
   const [sport, setSport] = useState("Football");
   const [matchType, setMatchType] = useState("Mixed");
-  const [selectedDate, setSelectedDate] = useState(getDateOptions()[0].value);
+  const [selectedDate, setSelectedDate] = useState(() => getDateOptions()[0].value);
   const [startTime, setStartTime] = useState(timeOptions[1]);
   const [duration, setDuration] = useState(durationOptions[1]);
   const [players, setPlayers] = useState(8);
@@ -82,14 +91,28 @@ export default function CreateGamePage() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [now, setNow] = useState(() => Date.now());
 
   const dateOptions = useMemo(() => getDateOptions(), []);
+  const minimumSelectableDate = useMemo(() => getMinimumSelectableDate().toISOString().split("T")[0], []);
   const selectedVenueData = useMemo(
     () => venues.find((venue) => venue.name === selectedVenue) ?? null,
     [selectedVenue]
   );
+  const gameStart = useMemo(() => new Date(`${selectedDate}T${startTime}`), [selectedDate, startTime]);
+  const canPostGame = Number.isFinite(gameStart.getTime()) && gameStart.getTime() - now >= fortyEightHoursInMs;
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const handleSubmit = async () => {
+    if (!canPostGame) {
+      setErrorMessage("Games must be created at least 48 hours in advance. Please pick a later date or time.");
+      return;
+    }
+
     setLoading(true);
     setErrorMessage("");
 
@@ -275,10 +298,13 @@ export default function CreateGamePage() {
                   <button
                     key={option.value}
                     type="button"
+                    disabled={option.value < minimumSelectableDate}
                     onClick={() => setSelectedDate(option.value)}
                     className={`min-w-[96px] rounded-3xl border px-4 py-3 text-left text-sm font-semibold transition ${
                       selectedDate === option.value
                         ? "border-[#1D9E75] bg-[#DCF8C6] text-[#1D9E75]"
+                        : option.value < minimumSelectableDate
+                        ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
                         : "border-slate-200 bg-white text-slate-700"
                     }`}
                   >
@@ -319,6 +345,12 @@ export default function CreateGamePage() {
                 </select>
               </label>
             </div>
+
+            {!canPostGame ? (
+              <p className="text-sm text-amber-700">
+                Games must be created at least 48 hours in advance. Please pick a later date or time.
+              </p>
+            ) : null}
 
             <div className="rounded-[24px] border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
@@ -458,7 +490,7 @@ export default function CreateGamePage() {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={loading || !canPostGame}
           className="w-full rounded-3xl bg-[#1D9E75] px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-[#1D9E75]/20 transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {loading ? "Creating game..." : "Post Game"}
