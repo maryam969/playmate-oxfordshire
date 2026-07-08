@@ -13,18 +13,6 @@ const sportOptions = [
   { emoji: "🥎", label: "Padel" },
 ];
 
-type RecentGame = {
-  id: string;
-  title: string;
-  date: string; // ISO date or stored format
-  sport: string;
-  start_time?: string | null;
-};
-
-type GamePlayerRow = {
-  game_id: string;
-};
-
 export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -38,9 +26,6 @@ export default function ProfilePage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Profile updated successfully");
   const [toastType, setToastType] = useState<"success" | "error">("success");
-  const [gamesPlayedCount, setGamesPlayedCount] = useState(0);
-  const [gamesCreatedCount, setGamesCreatedCount] = useState(0);
-  const [recentGamesState, setRecentGamesState] = useState<RecentGame[]>([]);
 
   useEffect(() => {
     const supabase = createSupabaseClient();
@@ -90,34 +75,6 @@ export default function ProfilePage() {
         setFirstName(metadataFirstName);
         setLastName(metadataLastName);
       }
-
-      // Fetch counts and recent games
-      const { count: playedCount } = await supabase
-        .from("game_players")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", data.user.id);
-      setGamesPlayedCount(playedCount ?? 0);
-
-      const { count: createdCount } = await supabase
-        .from("games")
-        .select("*", { count: "exact", head: true })
-        .eq("created_by", data.user.id);
-      setGamesCreatedCount(createdCount ?? 0);
-
-      const { data: gpRows } = await supabase.from("game_players").select("game_id").eq("user_id", data.user.id);
-      const gameIds = ((gpRows ?? []) as GamePlayerRow[]).map((row) => row.game_id);
-
-      if (gameIds.length > 0) {
-        const { data: recentRows } = await supabase
-          .from("games")
-          .select("id,title,date,sport,start_time")
-          .in("id", gameIds)
-          .order("date", { ascending: false })
-          .limit(3);
-        setRecentGamesState((recentRows as RecentGame[]) ?? []);
-      } else {
-        setRecentGamesState([]);
-      }
     };
 
     loadProfile();
@@ -149,7 +106,7 @@ export default function ProfilePage() {
     const fileExtension = extensionFromName || extensionFromType || "jpg";
     const filePath = `${data.user.id}.${fileExtension}`;
 
-    const { data: uploadData, error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
       upsert: true,
     });
 
@@ -394,26 +351,6 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-3xl bg-[#F8FAFC] p-4 text-center">
-                  <div className="text-xl">🎮</div>
-                  <p className="mt-3 text-3xl font-semibold text-[#1D9E75]">{gamesPlayedCount}</p>
-                  <p className="mt-2 text-sm text-slate-500">Games Played</p>
-                </div>
-                <div className="rounded-3xl bg-[#F8FAFC] p-4 text-center">
-                  <div className="text-xl">➕</div>
-                  <p className="mt-3 text-3xl font-semibold text-[#1D9E75]">{gamesCreatedCount}</p>
-                  <p className="mt-2 text-sm text-slate-500">Games Created</p>
-                </div>
-                <div className="rounded-3xl bg-[#F8FAFC] p-4 text-center">
-                  <div className="text-xl">👥</div>
-                  <p className="mt-3 text-3xl font-semibold text-[#1D9E75]">0</p>
-                  <p className="mt-2 text-sm text-slate-500">Connections</p>
-                </div>
-              </div>
-          </section>
-
           <button
             type="submit"
             className="w-full rounded-3xl bg-[#1D9E75] px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-[#1D9E75]/20 transition hover:bg-emerald-600"
@@ -427,41 +364,6 @@ export default function ProfilePage() {
             <span>Community Guidelines</span>
             <ChevronRight size={18} className="text-slate-400" />
           </Link>
-        </section>
-
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 text-sm font-semibold text-slate-900">Recent Games</div>
-          <div className="space-y-3">
-            {recentGamesState.length > 0 ? (
-              recentGamesState.map((game) => {
-                const today = new Date().toISOString().split("T")[0];
-                const status = (game.date >= today) ? "Upcoming" : "Played";
-                const statusColor = status === "Upcoming" ? "text-[#0F6E56] bg-[#E1F5EE]" : "text-slate-500 bg-slate-100";
-                const emoji = sportOptions.find((s) => s.label.toLowerCase() === game.sport.toLowerCase())?.emoji ?? "🏅";
-                return (
-                  <div key={game.id} className="flex items-center justify-between rounded-3xl border border-slate-100 bg-[#FAFBFC] p-4">
-                    <div>
-                      <div className="mb-1 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
-                        <span>{emoji}</span>
-                        {game.title}
-                      </div>
-                      <div className="text-sm text-slate-500">{new Date(game.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusColor}`}>
-                      {status}
-                    </span>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-                <p className="font-semibold text-slate-900">No games yet — join one in Explore!</p>
-                <Link href="/explore" className="mt-2 inline-flex font-semibold text-[#1D9E75]">
-                  Explore games
-                </Link>
-              </div>
-            )}
-          </div>
         </section>
       </div>
     </div>
