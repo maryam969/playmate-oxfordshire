@@ -14,6 +14,7 @@ type GameRow = {
   id: string;
   sport: string;
   title: string;
+  match_type: string | null;
   date: string;
   start_time: string;
   venue: string;
@@ -107,7 +108,7 @@ export default function ExplorePage() {
 
       const result = await supabase
         .from("games")
-        .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
+        .select("id, sport, title, match_type, date, start_time, venue, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
         .neq("status", "cancelled")
         .order("date", { ascending: true });
 
@@ -123,7 +124,7 @@ export default function ExplorePage() {
       if (user && joinedIds.length > 0) {
         const { data: cancelledJoinedGames } = await supabase
           .from("games")
-          .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
+          .select("id, sport, title, match_type, date, start_time, venue, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
           .eq("status", "cancelled")
           .in("id", joinedIds);
 
@@ -558,6 +559,18 @@ export default function ExplorePage() {
               const full = game.current_players >= game.max_players;
               const waitlistCount = waitlistCounts[game.id] ?? 0;
               const waitlisted = waitlistedGameIds.includes(game.id);
+              const matchTypeLabel =
+                game.match_type === "Male Only"
+                  ? "Male only"
+                  : game.match_type === "Female Only"
+                  ? "Female only"
+                  : "Mixed";
+              const matchTypeClass =
+                game.match_type === "Male Only"
+                  ? "rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600"
+                  : game.match_type === "Female Only"
+                  ? "rounded-full bg-pink-50 px-3 py-1 text-xs font-semibold text-pink-600"
+                  : "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
               return (
                 <div
                   key={game.id}
@@ -616,6 +629,7 @@ export default function ExplorePage() {
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
                       {spotsLeft} spots left
                     </span>
+                    <span className={matchTypeClass}>{matchTypeLabel}</span>
                     <span
                       className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
                         game.is_booked ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"

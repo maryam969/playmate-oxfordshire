@@ -24,6 +24,7 @@ type GameRow = {
   id: string;
   sport: string;
   title: string;
+  match_type: string | null;
   date: string;
   start_time: string;
   venue: string;
@@ -173,7 +174,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
       const { data: gamesData, error: gamesError } = await supabase
         .from("games")
-        .select("id, sport, title, date, start_time, venue, description, pitch_cost, is_booked, current_players, max_players, created_by, status")
+        .select("id, sport, title, match_type, date, start_time, venue, description, pitch_cost, is_booked, current_players, max_players, created_by, status")
         .ilike("sport", sport);
 
       if (!gamesError && gamesData) {
@@ -757,6 +758,18 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   const full = game.current_players >= game.max_players;
                   const waitlistCount = waitlistCounts[game.id] ?? 0;
                   const waitlisted = waitlistedGameIds.includes(game.id);
+                  const matchTypeLabel =
+                    game.match_type === "Male Only"
+                      ? "Male only"
+                      : game.match_type === "Female Only"
+                      ? "Female only"
+                      : "Mixed";
+                  const matchTypeClass =
+                    game.match_type === "Male Only"
+                      ? "rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600"
+                      : game.match_type === "Female Only"
+                      ? "rounded-full bg-pink-50 px-3 py-1 text-xs font-semibold text-pink-600"
+                      : "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
                   return (
                     <div key={game.id} className={`rounded-3xl border p-4 space-y-3 ${isCancelled ? "border-slate-300 bg-slate-100/80" : "border-slate-200 bg-[#FBFEFC]"}`}>
                       <div className="flex items-start justify-between gap-3">
@@ -810,6 +823,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                         <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
                           {spotsLeft} spots left
                         </span>
+                        <span className={matchTypeClass}>{matchTypeLabel}</span>
                         <span
                           className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
                             game.is_booked ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
