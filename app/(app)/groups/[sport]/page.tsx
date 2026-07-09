@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createElement, use, useEffect, useRef, useState } from "react";
-import { MoreVertical } from "lucide-react";
+import { Calendar, Clock, MapPin, MoreVertical } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { getSportIcon } from "@/lib/sport-icons";
 
@@ -838,15 +838,15 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
                       <div className="grid gap-3 text-sm text-slate-600">
                         <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
-                          <span>📅</span>
+                          <Calendar className="h-4 w-4 text-slate-400" />
                           <span>{game.date}</span>
                         </div>
                         <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
-                          <span>🕐</span>
+                          <Clock className="h-4 w-4 text-slate-400" />
                           <span>{game.start_time}</span>
                         </div>
                         <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-sm">
-                          <span>📍</span>
+                          <MapPin className="h-4 w-4 text-slate-400" />
                           <span>{game.venue}</span>
                         </div>
                       </div>

@@ -20,7 +20,7 @@ const steps = [
   },
   {
     number: '02',
-    icon: '📅',
+    icon: 'calendar',
     title: 'Join a game',
     description: 'Reserve your spot, find venues and connect with a team.',
   },

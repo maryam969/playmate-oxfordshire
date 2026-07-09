@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { MoreVertical } from "lucide-react";
+import { Calendar, Clock, MapPin, MoreVertical } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { getSportIcon } from "@/lib/sport-icons";
 
@@ -50,7 +50,7 @@ const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-ma
 export default function ExplorePage() {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState("All");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [games, setGames] = useState<GameRow[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserName, setCurrentUserName] = useState("");
@@ -194,15 +194,24 @@ export default function ExplorePage() {
   }, []);
 
   const filteredGames = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
     return games.filter((game) => {
       const matchesFilter = selectedFilter === "All" || game.sport === selectedFilter;
       const matchesSearch =
-        searchTerm.trim() === "" ||
-        game.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        game.venue.toLowerCase().includes(searchTerm.toLowerCase());
+        normalizedQuery === "" ||
+        [
+          game.title,
+          game.sport,
+          game.venue,
+          game.creator_name,
+          game.match_type,
+          game.description,
+        ].some((field) => (field ?? "").toLowerCase().includes(normalizedQuery));
+
       return matchesFilter && matchesSearch;
     });
-  }, [games, selectedFilter, searchTerm]);
+  }, [games, selectedFilter, searchQuery]);
 
   const handleJoin = async (game: GameRow) => {
     const supabase = createSupabaseClient();
@@ -494,10 +503,11 @@ export default function ExplorePage() {
           <div className="flex items-center gap-3 rounded-3xl bg-slate-100 px-3 py-2">
             <span className="text-slate-400">🔍</span>
             <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search games, venues, teams"
               className="w-full bg-transparent text-sm text-[#1a1a1a] outline-none placeholder:text-slate-400"
+              style={{ fontSize: "16px" }}
             />
           </div>
         </div>
@@ -645,9 +655,18 @@ export default function ExplorePage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-                    <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">📅 {game.date}</span>
-                    <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">🕐 {game.start_time}</span>
-                    <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">📍 {game.venue}</span>
+                    <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                      {game.date}
+                    </span>
+                    <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                      {game.start_time}
+                    </span>
+                    <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2">
+                      <MapPin className="h-4 w-4 text-slate-400" />
+                      {game.venue}
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -824,10 +843,8 @@ export default function ExplorePage() {
             })
           ) : (
             <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-              <p className="text-base font-semibold text-slate-900">No games yet — be the first to create one!</p>
-              <Link href="/create-game" className="mt-3 inline-flex text-sm font-semibold text-[#1D9E75]">
-                Create a game
-              </Link>
+              <p className="text-base font-semibold text-slate-900">No games match your search</p>
+              <p className="mt-2 text-sm text-slate-500">Try a different sport or keyword.</p>
             </div>
           )}
         </div>
