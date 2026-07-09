@@ -42,7 +42,7 @@ const communities = [
 
 const testimonials = [
   {
-    quote: 'PlayMate helped me find regular football matches across the city. The app feels polished and easy to use.',
+    quote: 'OxSporties helped me find regular football matches across the city. The app feels polished and easy to use.',
     name: 'Emily Taylor',
     badge: 'Football',
   },
@@ -65,11 +65,10 @@ export default function Home() {
         <div className="flex h-full items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-100">
-              <Image src="/logo.png" alt="PlayMate logo" fill className="object-cover" />
+              <Image src="/logo.png" alt="OxSporties logo" fill className="object-cover" />
             </div>
             <div>
-              <p className="text-base font-black text-[#0a1628]">PlayMate</p>
-              <p className="text-xs text-[#6B7280]">Oxfordshire</p>
+              <p className="text-base font-black text-[#0a1628]">OxSporties</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -101,7 +100,7 @@ export default function Home() {
           <div className="lg:w-[55%]">
             <span className="inline-flex items-center gap-2 rounded-full bg-[#ECFBF4] px-4 py-2 text-sm font-semibold text-[#047857]">
               <div className="relative h-5 w-5 overflow-hidden rounded-full bg-white">
-                <Image src="/logo.png" alt="PlayMate logo" fill className="object-cover" />
+                <Image src="/logo.png" alt="OxSporties logo" fill className="object-cover" />
               </div>
               Oxford's #1 Sports Platform
             </span>
@@ -144,10 +143,10 @@ export default function Home() {
               <div className="flex items-center justify-between rounded-3xl bg-slate-950 px-4 py-3 text-white">
                 <div className="flex items-center gap-3">
                   <div className="relative h-7 w-7 overflow-hidden rounded-full bg-white">
-                    <Image src="/logo.png" alt="PlayMate logo" fill className="object-contain" />
+                    <Image src="/logo.png" alt="OxSporties logo" fill className="object-contain" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">PlayMate</p>
+                    <p className="text-sm font-semibold">OxSporties</p>
                     <p className="text-xs text-slate-300">Dashboard</p>
                   </div>
                 </div>
@@ -291,7 +290,7 @@ export default function Home() {
       <footer className="bg-[#0a1628] px-6 py-14 text-slate-300">
         <div className="mx-auto grid max-w-7xl gap-10 md:grid-cols-4">
           <div>
-            <p className="text-lg font-black text-white">PlayMate Oxfordshire</p>
+            <p className="text-lg font-black text-white">OxSporties</p>
             <p className="mt-3 text-sm text-slate-400">Bringing Oxford together through sport</p>
           </div>
           <div>
@@ -319,7 +318,7 @@ export default function Home() {
             </ul>
           </div>
         </div>
-        <p className="mt-10 text-center text-xs text-slate-500">© {new Date().getFullYear()} PlayMate Oxfordshire. All rights reserved.</p>
+        <p className="mt-10 text-center text-xs text-slate-500">© {new Date().getFullYear()} OxSporties. All rights reserved.</p>
       </footer>
     </div>
   )

@@ -76,7 +76,7 @@ export default function SignUpPage() {
         <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/40">
           <div className="mb-6">
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#1D9E75]">Create account</p>
-            <h1 className="mt-3 text-3xl font-semibold text-slate-950">Sign up for PlayMate Oxfordshire</h1>
+            <h1 className="mt-3 text-3xl font-semibold text-slate-950">Sign up for OxSporties</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">Start building your profile and join local sports games across Oxfordshire.</p>
           </div>
 

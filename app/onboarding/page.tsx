@@ -36,7 +36,7 @@ export default function OnboardingPage() {
       <div className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-12 sm:px-8">
         <div className="rounded-[12px] border border-[#e5e7eb] bg-white p-6 shadow-sm shadow-slate-200/40">
           <div className="mb-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#1D9E75]">Welcome to PlayMate</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#1D9E75]">Welcome to OxSporties</p>
             <h1 className="mt-3 text-3xl font-semibold text-slate-950">Complete your profile</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">Tell us a bit about yourself so we can match you to the best games.</p>
           </div>

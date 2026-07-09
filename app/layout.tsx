@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PlayMate Oxfordshire",
-  description: "A sports social platform for Oxfordshire players and venues.",
+  title: "OxSporties",
+  description: "OxSporties is a sports social platform for Oxfordshire players and venues.",
 };
 
 export default function RootLayout({

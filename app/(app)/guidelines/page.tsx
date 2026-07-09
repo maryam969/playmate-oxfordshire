@@ -26,24 +26,24 @@ const sections = [
   {
     title: "Paying your share",
     points: [
-      "When a host sets a pitch cost, PlayMate splits it fairly between players.",
+      "When a host sets a pitch cost, OxSporties splits it fairly between players.",
       "Pay your share to the host promptly, before or on the day of the game.",
       "Turning up and not paying isn't fair on the host who fronted the cost.",
     ],
   },
   {
-    title: "Being a good PlayMate",
+    title: "Being a good OxSporties",
     points: [
       "Treat everyone with respect, on and off the pitch.",
       "Show up on time and ready to play.",
       "Communicate — if you're running late or can't make it, let the group know in the chat.",
-      "Keep it inclusive. PlayMate is for players of all levels.",
+      "Keep it inclusive. OxSporties is for players of all levels.",
     ],
   },
   {
     title: "Safety",
     points: [
-      "PlayMate is for players aged 16 and over. Under-18s should have a parent or guardian's permission to take part.",
+      "OxSporties is for players aged 16 and over. Under-18s should have a parent or guardian's permission to take part.",
       "Games happen in public venues. Use common sense and look out for one another.",
       "If someone behaves inappropriately, report it so we can keep the community safe.",
     ],
@@ -71,7 +71,7 @@ export default function GuidelinesPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1D9E75]">Community Guidelines</p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Community Guidelines</h1>
           <p className="max-w-prose text-sm leading-6 text-slate-600">
-            A few simple rules to keep PlayMate fun, fair, and reliable for everyone.
+            A few simple rules to keep OxSporties fun, fair, and reliable for everyone.
           </p>
         </header>
 
@@ -92,7 +92,7 @@ export default function GuidelinesPage() {
         </div>
 
         <footer className="rounded-[24px] border border-[#DCECE6] bg-[#F7FCFA] px-5 py-4 text-sm leading-6 text-slate-700">
-          By using PlayMate, you agree to follow these guidelines. Thanks for being part of the community! 🏆
+          By using OxSporties, you agree to follow these guidelines. Thanks for being part of the community! 🏆
         </footer>
       </div>
     </div>
