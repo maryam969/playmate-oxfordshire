@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createElement, use, useEffect, useRef, useState } from "react";
 import { Calendar, Clock, MapPin, MoreVertical } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
+import { sendNotification } from "@/lib/notify";
 import { getSportIcon } from "@/lib/sport-icons";
 
 type ChatMessage = {
@@ -375,6 +376,35 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     setGames((current) =>
       current.map((item) => (item.id === game.id ? { ...item, current_players: item.current_players + 1 } : item))
     );
+
+    if (game.created_by && game.created_by !== currentUserId) {
+      try {
+        const { data: hostEmailData } = await supabase.rpc("get_user_email", { user_id: game.created_by });
+        const hostEmail = hostEmailData as string | null;
+
+        if (hostEmail) {
+          const joinerName = currentUserName || userData.user.email?.split("@")[0] || "User";
+          await sendNotification(
+            hostEmail,
+            `${joinerName} joined your ${game.sport} game`,
+            `<div style="font-family: sans-serif;">
+        <h2 style="color:#1D9E75;">Someone joined your game! 🎉</h2>
+        <p><strong>${joinerName}</strong> just joined your ${game.sport} game.</p>
+        <p><strong>When:</strong> ${game.date} at ${game.start_time}<br/>
+           <strong>Where:</strong> ${game.venue}</p>
+        <p>Spots filled: ${game.current_players + 1}/${game.max_players}</p>
+        <p style="margin-top:20px;">
+          <a href="https://oxsporties.com" style="background:#1D9E75;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">Open OxSporties</a>
+        </p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:24px;">You're receiving this because you host this game on OxSporties.</p>
+      </div>`
+          );
+        }
+      } catch (error) {
+        console.error("Failed to send join notification:", error);
+      }
+    }
+
     setJoiningGameId(null);
   };
 
