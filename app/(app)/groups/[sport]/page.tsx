@@ -383,7 +383,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
         const hostEmail = hostEmailData as string | null;
 
         if (hostEmail) {
-          const joinerName = currentUserName || userData.user.email?.split("@")[0] || "User";
+          const joinerName = currentUserName || "User";
           await sendNotification(
             hostEmail,
             `${joinerName} joined your ${game.sport} game`,
