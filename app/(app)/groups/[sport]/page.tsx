@@ -598,24 +598,22 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       }}
     >
       <div className="flex h-full flex-col">
-        <div className="shrink-0 bg-white px-3 py-2 border-b border-slate-200">
-          <div className="flex items-center justify-between gap-3">
-            <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
-              ←
-            </Link>
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2]">
-                {createElement(sportHeaderIcon, { size: 24, className: "text-[#1D9E75]", "aria-hidden": true })}
-              </div>
-              <p className="text-base font-semibold text-slate-950">{sportLabel}</p>
+        <div className="shrink-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+          <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
+            ←
+          </Link>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2]">
+              {createElement(sportHeaderIcon, { size: 24, className: "text-[#1D9E75]", "aria-hidden": true })}
             </div>
-            <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
-              ⋯
-            </button>
+            <p className="text-base font-semibold text-slate-950">{sportLabel}</p>
           </div>
+          <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
+            ⋯
+          </button>
         </div>
 
-        <div className="shrink-0 bg-white px-3 py-2">
+        <div className="shrink-0 bg-white border-b border-slate-200 px-4 pb-3 pt-1">
           <div className="flex gap-2">
             <button
               type="button"
@@ -638,9 +636,9 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
           {activeTab === "chat" ? (
-            <div className="h-full overflow-y-auto p-2">
+            <div className="h-full">
               <div className="space-y-4">
               {messages.length === 0 ? (
                 <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-slate-500">
@@ -722,7 +720,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
               </div>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto p-2">
+            <div className="h-full">
               <div className="space-y-4">
               {joinError ? (
                 <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -1017,17 +1015,18 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           )}
         </div>
 
-        <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-3">
-          {replyingTo ? (
-            <div className="bg-green-50 border-l-4 border-[#1D9E75] px-3 py-2 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-[#1D9E75]">{replyingTo.sender_name}</p>
-                <p className="text-xs text-slate-500 truncate max-w-[250px]">{replyingTo.content}</p>
+        <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-3 flex items-center gap-2">
+          <div className="w-full">
+            {replyingTo ? (
+              <div className="w-full bg-green-50 border-l-4 border-[#1D9E75] px-3 py-2 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-[#1D9E75]">{replyingTo.sender_name}</p>
+                  <p className="text-xs text-slate-500 truncate max-w-[250px]">{replyingTo.content}</p>
+                </div>
+                <button onClick={() => setReplyingTo(null)} className="text-slate-400 text-lg">✕</button>
               </div>
-              <button onClick={() => setReplyingTo(null)} className="text-slate-400 text-lg">✕</button>
-            </div>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
+            ) : null}
+            <div className="w-full flex items-center gap-2">
             <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
               + Add game
             </Link>
@@ -1054,6 +1053,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
               >
                 {sending ? "…" : "➤"}
               </button>
+            </div>
             </div>
           </div>
         </div>
