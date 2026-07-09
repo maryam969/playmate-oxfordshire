@@ -598,45 +598,47 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       }}
     >
       <div className="flex h-full flex-col">
-        <div className="shrink-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-          <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
-            ←
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2]">
-              {createElement(sportHeaderIcon, { size: 24, className: "text-[#1D9E75]", "aria-hidden": true })}
+        <div className="shrink-0 bg-white border-b border-slate-200">
+          <div className="flex items-center justify-between px-4 py-3">
+            <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
+              ←
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2]">
+                {createElement(sportHeaderIcon, { size: 24, className: "text-[#1D9E75]", "aria-hidden": true })}
+              </div>
+              <p className="text-base font-semibold text-slate-950">{sportLabel}</p>
             </div>
-            <p className="text-base font-semibold text-slate-950">{sportLabel}</p>
-          </div>
-          <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
-            ⋯
-          </button>
-        </div>
-
-        <div className="shrink-0 bg-white border-b border-slate-200 px-4 pb-3 pt-1">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("chat")}
-              className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
-                activeTab === "chat" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
-              }`}
-            >
-              Chat
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("games")}
-              className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
-                activeTab === "games" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
-              }`}
-            >
-              Games
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
+              ⋯
             </button>
           </div>
+
+          <div className="px-4 pb-3">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("chat")}
+                className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
+                  activeTab === "chat" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
+                }`}
+              >
+                Chat
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("games")}
+                className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition ${
+                  activeTab === "games" ? "bg-[#DCF8C6] text-[#1D9E75]" : "text-slate-500"
+                }`}
+              >
+                Games
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 pt-2">
           {activeTab === "chat" ? (
             <div className="h-full">
               <div className="space-y-4">
