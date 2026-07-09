@@ -167,7 +167,6 @@ export default function DashboardPage() {
   const statsChips = [
     { label: `${myGames.length} Games` },
     { label: `${hostingCount} Hosting` },
-    { label: "0 Friends" },
   ];
 
   return (
@@ -184,9 +183,9 @@ export default function DashboardPage() {
           <p className="text-sm font-semibold text-slate-900">Your activity</p>
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-[#1D9E75]">Live</span>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="grid grid-cols-2 gap-3">
           {statsChips.map((chip) => (
-            <div key={chip.label} className="min-w-[120px] rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <div key={chip.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-sm font-semibold text-slate-950">{chip.label}</p>
             </div>
           ))}
