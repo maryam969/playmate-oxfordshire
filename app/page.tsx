@@ -65,28 +65,26 @@ const testimonials = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      <header className="sticky top-0 z-30 h-16 bg-white border-b border-[#F0F0F0] px-12">
-        <div className="flex h-full items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-30 border-b border-[#F0F0F0] bg-white">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
             <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-100">
               <Image src="/logo.png" alt="OxSporties logo" fill className="object-cover" />
             </div>
-            <div>
-              <p className="text-base font-black text-[#0a1628]">OxSporties</p>
-            </div>
+            <span className="whitespace-nowrap text-lg font-semibold text-slate-900">OxSporties</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-none items-center gap-3">
             <Link
               href="/signin"
-              className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              className="whitespace-nowrap text-sm font-medium text-slate-700"
             >
-              Sign In
+              Sign in
             </Link>
             <Link
               href="/signup"
-              className="rounded-full bg-[#1D9E75] px-6 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+              className="whitespace-nowrap rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
             >
-              Get Started
+              Get started
             </Link>
           </div>
         </div>
