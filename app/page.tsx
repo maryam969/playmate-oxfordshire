@@ -3,6 +3,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { UserCircle, CalendarCheck, Trophy } from 'lucide-react'
+import type { IconType } from 'react-icons'
+import { IoBasketballOutline, IoFootballOutline, IoTennisballOutline } from 'react-icons/io5'
+import { GiShuttlecock } from 'react-icons/gi'
+import { MdSportsTennis } from 'react-icons/md'
 
 const stats = [
   { value: '3,800+', label: 'Active Players' },
@@ -32,12 +36,12 @@ const steps = [
   },
 ]
 
-const communities = [
-  { emoji: '⚽', name: 'Football', players: '1,250 active players' },
-  { emoji: '🎾', name: 'Tennis', players: '860 active players' },
-  { emoji: '🏀', name: 'Basketball', players: '720 active players' },
-  { emoji: '🏸', name: 'Badminton', players: '540 active players' },
-  { emoji: '🥎', name: 'Padel', players: '430 active players' },
+const communities: Array<{ icon: IconType; name: string }> = [
+  { icon: IoFootballOutline, name: 'Football' },
+  { icon: IoTennisballOutline, name: 'Tennis' },
+  { icon: IoBasketballOutline, name: 'Basketball' },
+  { icon: GiShuttlecock, name: 'Badminton' },
+  { icon: MdSportsTennis, name: 'Padel' },
 ]
 
 const testimonials = [
@@ -255,11 +259,12 @@ export default function Home() {
             {communities.map((community) => (
               <div
                 key={community.name}
-                className="min-w-[160px] md:min-w-0 rounded-2xl border border-gray-100 bg-white p-6 text-center transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
+                className="min-w-[160px] md:min-w-0 rounded-2xl border border-gray-100 bg-white px-6 py-7 text-center transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
-                <div className="text-4xl">{community.emoji}</div>
-                <h3 className="mt-6 text-lg font-semibold text-slate-950">{community.name}</h3>
-                <p className="mt-2 text-sm font-semibold text-[#047857]">{community.players}</p>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-[#1D9E75]">
+                  <community.icon size={40} />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-slate-950">{community.name}</h3>
               </div>
             ))}
           </div>
