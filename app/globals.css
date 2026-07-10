@@ -57,3 +57,14 @@ body {
     50% { transform: none; }
   }
 }
+
+@keyframes oxWave {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes oxWave { 0%,100% { transform: none; } }
+}

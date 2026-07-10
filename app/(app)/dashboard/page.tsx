@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createSupabaseClient } from "@/lib/supabase";
-import { Clock3, MapPin } from "lucide-react";
+import { Clock3, Hand, MapPin } from "lucide-react";
 import { getSportIcon } from "@/lib/sport-icons";
 
 type DashboardGameRow = {
@@ -159,7 +159,7 @@ export default function DashboardPage() {
     loadDashboardData();
   }, []);
 
-  const greeting = `${getGreetingByHour(new Date().getHours())}, ${firstName || "there"} 👋`;
+  const greeting = getGreetingByHour(new Date().getHours());
   const hostingCount = myGames.filter((game) => game.isHost).length;
   const nextGame = myGames[0] ?? null;
   const remainingGames = nextGame ? myGames.slice(1) : [];
@@ -172,9 +172,19 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 pb-[90px]">
       <section className="rounded-[20px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
-        <div className="space-y-2">
-          <p className="text-[22px] font-semibold text-slate-950">{loading ? "Hello 👋" : greeting}</p>
-          <p className="text-sm text-slate-500">Ready to play today?</p>
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+            style={{ animation: "oxWave 2.6s ease-in-out infinite", transformOrigin: "70% 70%" }}
+          >
+            <Hand size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-slate-800 leading-tight">
+              {loading ? "Hello" : `${greeting}, ${firstName || "there"}`}
+            </h1>
+            <p className="mt-0.5 text-sm text-slate-500">Ready to play today?</p>
+          </div>
         </div>
       </section>
 
