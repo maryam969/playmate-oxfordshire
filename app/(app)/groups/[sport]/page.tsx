@@ -111,8 +111,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
     const loadMessages = async () => {
       const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id ?? null;
+
       if (userData.user) {
-        setCurrentUserId(userData.user.id);
+        setCurrentUserId(userId);
 
         const { data: profileData } = await supabase
           .from("profiles")
@@ -144,6 +146,17 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
       if (!error && data) {
         setMessages(data as ChatMessage[]);
+
+        if (userId) {
+          await supabase.from("chat_reads").upsert(
+            {
+              user_id: userId,
+              sport,
+              last_read_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,sport" }
+          );
+        }
 
         const uniqueUserIds = [...new Set(data.map((m: ChatMessage) => m.user_id))]
         if (uniqueUserIds.length > 0) {

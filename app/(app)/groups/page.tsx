@@ -1,17 +1,54 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createSupabaseClient } from "@/lib/supabase";
 import { getSportIcon } from "@/lib/sport-icons";
+import { getUnreadCountsForUser, SPORTS, type SportSlug } from "@/lib/unread";
 
-const sportGroups = [
-  { label: "Football", members: 142, unread: 3, href: "/groups/football" },
-  { label: "Tennis", members: 78, unread: 0, href: "/groups/tennis" },
-  { label: "Basketball", members: 55, unread: 1, href: "/groups/basketball" },
-  { label: "Badminton", members: 41, unread: 0, href: "/groups/badminton" },
-  { label: "Padel", members: 29, unread: 4, href: "/groups/padel" },
-];
+const sportGroups = SPORTS.map((sport) => ({
+  ...sport,
+  members:
+    sport.slug === "football"
+      ? 142
+      : sport.slug === "tennis"
+      ? 78
+      : sport.slug === "basketball"
+      ? 55
+      : sport.slug === "badminton"
+      ? 41
+      : 29,
+  href: `/groups/${sport.slug}`,
+}));
+
+const emptyUnreadBySport: Record<SportSlug, number> = {
+  football: 0,
+  tennis: 0,
+  basketball: 0,
+  badminton: 0,
+  padel: 0,
+};
 
 export default function GroupsPage() {
+  const [unreadBySport, setUnreadBySport] = useState<Record<SportSlug, number>>(emptyUnreadBySport);
+
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+
+    const loadUnreadCounts = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        setUnreadBySport(emptyUnreadBySport);
+        return;
+      }
+
+      const { bySport } = await getUnreadCountsForUser(supabase, userData.user.id);
+      setUnreadBySport(bySport);
+    };
+
+    loadUnreadCounts();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#F0F2F5] px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)] pt-4 text-[#1a1a1a]">
       <div className="mx-auto max-w-[480px] space-y-4 pb-8">
@@ -27,6 +64,7 @@ export default function GroupsPage() {
         <div className="space-y-3">
           {sportGroups.map((group) => {
             const SportIcon = getSportIcon(group.label);
+            const unreadCount = unreadBySport[group.slug] ?? 0;
 
             return (
               <Link
@@ -43,9 +81,9 @@ export default function GroupsPage() {
                     <p className="mt-1 text-sm text-slate-500">{group.members} members</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {group.unread > 0 ? (
-                      <span className="rounded-full bg-[#DCF8C6] px-3 py-1 text-[11px] font-semibold text-[#0F6E56]">
-                        {group.unread}
+                    {unreadCount > 0 ? (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold">
+                        {unreadCount > 99 ? "99+" : unreadCount}
                       </span>
                     ) : null}
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-400">

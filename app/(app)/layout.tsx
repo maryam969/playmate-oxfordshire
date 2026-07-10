@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, MessageCircle, Plus, Search, User } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createSupabaseClient } from "@/lib/supabase";
+import { getUnreadCountsForUser } from "@/lib/unread";
 
 const navItems = [
   { href: "/dashboard", label: "Home" },
@@ -15,6 +17,24 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [groupsUnreadTotal, setGroupsUnreadTotal] = useState(0);
+
+  useEffect(() => {
+    const supabase = createSupabaseClient();
+
+    const loadUnreadTotal = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        setGroupsUnreadTotal(0);
+        return;
+      }
+
+      const { total } = await getUnreadCountsForUser(supabase, userData.user.id);
+      setGroupsUnreadTotal(total);
+    };
+
+    loadUnreadTotal();
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] text-[#1a1a1a]">
@@ -41,6 +61,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               : item.href === "/explore"
               ? Search
               : User;
+          const isGroupsTab = item.href === "/groups/football";
 
           return (
             <Link
@@ -50,7 +71,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 active ? "text-[#1D9E75]" : "text-slate-400"
               }`}
             >
-              <Icon size={22} strokeWidth={2} />
+              <span className="relative inline-flex">
+                <Icon size={22} strokeWidth={2} />
+                {isGroupsTab && groupsUnreadTotal > 0 ? (
+                  <span className="absolute -right-3 -top-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold">
+                    {groupsUnreadTotal > 99 ? "99+" : groupsUnreadTotal}
+                  </span>
+                ) : null}
+              </span>
               <span>{item.label}</span>
             </Link>
           );
