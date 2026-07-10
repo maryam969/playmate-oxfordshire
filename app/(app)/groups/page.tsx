@@ -8,16 +8,6 @@ import { getUnreadCountsForUser, SPORTS, type SportSlug } from "@/lib/unread";
 
 const sportGroups = SPORTS.map((sport) => ({
   ...sport,
-  members:
-    sport.slug === "football"
-      ? 142
-      : sport.slug === "tennis"
-      ? 78
-      : sport.slug === "basketball"
-      ? 55
-      : sport.slug === "badminton"
-      ? 41
-      : 29,
   href: `/groups/${sport.slug}`,
 }));
 
@@ -78,7 +68,6 @@ export default function GroupsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[18px] font-semibold text-slate-950">{group.label}</p>
-                    <p className="mt-1 text-sm text-slate-500">{group.members} members</p>
                   </div>
                   <div className="flex items-center gap-3">
                     {unreadCount > 0 ? (
