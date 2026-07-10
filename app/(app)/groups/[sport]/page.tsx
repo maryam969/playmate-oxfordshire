@@ -695,10 +695,17 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
         <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 pt-2">
           {activeTab === "chat" ? (
             <div className="h-full">
-              <div className="space-y-4">
+              <div className={messages.length === 0 ? "flex h-full" : "space-y-4"}>
               {messages.length === 0 ? (
-                <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-slate-500">
-                  No messages yet — say hi! 👋
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+                    style={{ animation: "oxBounce 1.6s ease-in-out infinite" }}
+                  >
+                    {createElement(sportHeaderIcon, { size: 30, "aria-hidden": true })}
+                  </div>
+                  <p className="text-base font-semibold text-slate-800">No messages yet</p>
+                  <p className="text-sm text-slate-500">Be the first to say hello and get the game going.</p>
                 </div>
               ) : messages.map((message) => {
                 const isOwn = message.user_id === currentUserId;
