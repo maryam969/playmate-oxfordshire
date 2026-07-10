@@ -29,6 +29,9 @@ type GameRow = {
   date: string;
   start_time: string;
   venue: string;
+  custom_address: string | null;
+  venue_lat: number | null;
+  venue_lng: number | null;
   description: string | null;
   pitch_cost: number;
   is_booked: boolean;
@@ -77,7 +80,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [expandedGameId, setExpandedGameId] = useState<string | null>(null);
   const [expandedDetailsGameId, setExpandedDetailsGameId] = useState<string | null>(null);
   const [openMenuGameId, setOpenMenuGameId] = useState<string | null>(null);
-  const [geocodeByVenue, setGeocodeByVenue] = useState<Record<string, GeocodeState>>({});
+  const [geocodeByGameId, setGeocodeByGameId] = useState<Record<string, GeocodeState>>({});
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
   const [now, setNow] = useState(() => Date.now());
   const { sport } = use(params);
@@ -188,7 +191,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
       const { data: gamesData, error: gamesError } = await supabase
         .from("games")
-        .select("id, sport, title, match_type, date, start_time, venue, description, pitch_cost, is_booked, current_players, max_players, created_by, status")
+        .select("id, sport, title, match_type, date, start_time, venue, custom_address, venue_lat, venue_lng, description, pitch_cost, is_booked, current_players, max_players, created_by, status")
         .ilike("sport", sport);
 
       if (!gamesError && gamesData) {
@@ -595,40 +598,48 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     setOpenMenuGameId(null);
   };
 
-  const loadVenueCoordinates = async (venue: string) => {
-    setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "loading" } }));
+  const loadVenueCoordinates = async (game: GameRow) => {
+    if (game.venue_lat !== null && game.venue_lng !== null) {
+      setGeocodeByGameId((current) => ({
+        ...current,
+        [game.id]: { status: "success", lat: game.venue_lat as number, lng: game.venue_lng as number },
+      }));
+      return;
+    }
+
+    setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "loading" } }));
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${venue}, Oxford`)}&format=json&limit=1`
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${game.venue}, Oxford`)}&format=json&limit=1`
       );
 
       if (!response.ok) {
-        setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
+        setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "error" } }));
         return;
       }
 
       const result = (await response.json()) as Array<{ lat: string; lon: string }>;
       if (!result[0]) {
-        setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
+        setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "error" } }));
         return;
       }
 
-      setGeocodeByVenue((current) => ({
+      setGeocodeByGameId((current) => ({
         ...current,
-        [venue]: { status: "success", lat: Number(result[0].lat), lng: Number(result[0].lon) },
+        [game.id]: { status: "success", lat: Number(result[0].lat), lng: Number(result[0].lon) },
       }));
     } catch {
-      setGeocodeByVenue((current) => ({ ...current, [venue]: { status: "error" } }));
+      setGeocodeByGameId((current) => ({ ...current, [game.id]: { status: "error" } }));
     }
   };
 
   const handleMapToggle = (game: GameRow) => {
     setExpandedGameId((current) => (current === game.id ? null : game.id));
 
-    const currentGeocode = geocodeByVenue[game.venue];
+    const currentGeocode = geocodeByGameId[game.id];
     if (!currentGeocode || currentGeocode.status === "idle" || currentGeocode.status === "error") {
-      loadVenueCoordinates(game.venue);
+      loadVenueCoordinates(game);
     }
   };
 
@@ -780,18 +791,29 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   const joined = joinedGameIds.includes(game.id);
                   const spotsLeft = Math.max(game.max_players - game.current_players, 0);
                   const gameSportIcon = getSportIcon(game.sport);
-                  const geocodeState = geocodeByVenue[game.venue];
+                  const geocodeState = geocodeByGameId[game.id];
                   const hasDescription = Boolean(game.description?.trim());
                   const encodedVenue = encodeURIComponent(`${game.venue}, Oxford`);
-                  const hasCoords = geocodeState?.status === "success";
+                  const hasStoredCoords = game.venue_lat !== null && game.venue_lng !== null;
+                  const latitude = hasStoredCoords
+                    ? (game.venue_lat as number)
+                    : geocodeState?.status === "success"
+                    ? geocodeState.lat
+                    : null;
+                  const longitude = hasStoredCoords
+                    ? (game.venue_lng as number)
+                    : geocodeState?.status === "success"
+                    ? geocodeState.lng
+                    : null;
+                  const hasCoords = latitude !== null && longitude !== null;
                   const googleUrl = hasCoords
-                    ? `https://www.google.com/maps/search/?api=1&query=${geocodeState.lat},${geocodeState.lng}`
+                    ? `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
                     : `https://www.google.com/maps/search/?api=1&query=${encodedVenue}`;
                   const appleUrl = hasCoords
-                    ? `https://maps.apple.com/?ll=${geocodeState.lat},${geocodeState.lng}`
+                    ? `https://maps.apple.com/?ll=${latitude},${longitude}`
                     : `https://maps.apple.com/?q=${encodedVenue}`;
                   const wazeUrl = hasCoords
-                    ? `https://waze.com/ul?ll=${geocodeState.lat},${geocodeState.lng}&navigate=yes`
+                    ? `https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes`
                     : `https://waze.com/ul?q=${encodedVenue}`;
                   const gameStart = new Date(`${game.date}T${game.start_time}`);
                   const hoursUntilGame = (gameStart.getTime() - now) / (1000 * 60 * 60);
@@ -938,8 +960,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
                           {geocodeState?.status === "loading" ? (
                             <p className="px-2 py-4 text-sm text-slate-500">Finding location...</p>
-                          ) : geocodeState?.status === "success" ? (
-                            <VenueLeafletMap lat={geocodeState.lat} lng={geocodeState.lng} title={game.venue} />
+                          ) : hasCoords ? (
+                            <VenueLeafletMap lat={latitude as number} lng={longitude as number} title={game.venue} />
                           ) : (
                             <p className="px-2 py-4 text-sm text-slate-500">Location not found</p>
                           )}

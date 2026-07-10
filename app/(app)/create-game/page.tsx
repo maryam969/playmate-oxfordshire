@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
@@ -53,6 +54,17 @@ const timeOptions = ["09:00", "10:00", "11:00", "12:00", "14:00", "16:00", "18:0
 const durationOptions = ["45 min", "60 min", "90 min", "120 min"];
 const fortyEightHoursInMs = 48 * 60 * 60 * 1000;
 
+type GeocodeState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "success"; lat: number; lng: number };
+
+const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
+  ssr: false,
+  loading: () => <p className="text-xs text-slate-500">Loading map...</p>,
+});
+
 function getMinimumSelectableDate() {
   const date = new Date();
   date.setTime(date.getTime() + fortyEightHoursInMs);
@@ -86,6 +98,9 @@ export default function CreateGamePage() {
   const [duration, setDuration] = useState(durationOptions[1]);
   const [players, setPlayers] = useState(8);
   const [selectedVenue, setSelectedVenue] = useState(venues[0].name);
+  const [venueMode, setVenueMode] = useState<"preset" | "custom">("preset");
+  const [customAddress, setCustomAddress] = useState("");
+  const [customAddressGeocode, setCustomAddressGeocode] = useState<GeocodeState>({ status: "idle" });
   const [pitchCost, setPitchCost] = useState(0);
   const [isBooked, setIsBooked] = useState(false);
   const [description, setDescription] = useState("");
@@ -107,9 +122,50 @@ export default function CreateGamePage() {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  const geocodeCustomAddress = async () => {
+    const normalizedAddress = customAddress.trim();
+    if (!normalizedAddress) {
+      setCustomAddressGeocode({ status: "idle" });
+      return;
+    }
+
+    setCustomAddressGeocode({ status: "loading" });
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${normalizedAddress}, Oxford, UK`)}&format=json&limit=1`
+      );
+
+      if (!response.ok) {
+        setCustomAddressGeocode({ status: "error" });
+        return;
+      }
+
+      const result = (await response.json()) as Array<{ lat: string; lon: string }>;
+      if (!result[0]) {
+        setCustomAddressGeocode({ status: "error" });
+        return;
+      }
+
+      setCustomAddressGeocode({
+        status: "success",
+        lat: Number.parseFloat(result[0].lat),
+        lng: Number.parseFloat(result[0].lon),
+      });
+    } catch {
+      setCustomAddressGeocode({ status: "error" });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!canPostGame) {
       setErrorMessage("Games must be created at least 48 hours in advance. Please pick a later date or time.");
+      return;
+    }
+
+    const normalizedCustomAddress = customAddress.trim();
+    if (venueMode === "custom" && !normalizedCustomAddress) {
+      setErrorMessage("Please enter an address for your custom location.");
       return;
     }
 
@@ -148,6 +204,13 @@ export default function CreateGamePage() {
 
     console.log('Final creator name:', creatorName)
 
+    const usingCustomAddress = venueMode === "custom";
+    const venueToSave = usingCustomAddress ? normalizedCustomAddress : selectedVenue;
+    const customLat =
+      usingCustomAddress && customAddressGeocode.status === "success" ? customAddressGeocode.lat : null;
+    const customLng =
+      usingCustomAddress && customAddressGeocode.status === "success" ? customAddressGeocode.lng : null;
+
     const { data: newGame, error: gameError } = await supabase
       .from("games")
       .insert({
@@ -158,10 +221,13 @@ export default function CreateGamePage() {
         date: selectedDate,
         start_time: startTime,
         duration,
-        venue: selectedVenue,
+        venue: venueToSave,
+        custom_address: usingCustomAddress ? normalizedCustomAddress : null,
+        venue_lat: customLat,
+        venue_lng: customLng,
         pitch_cost: pitchCost,
         is_booked: isBooked,
-        booking_url: selectedVenueData?.bookingUrl ?? null,
+        booking_url: usingCustomAddress ? null : selectedVenueData?.bookingUrl ?? null,
         description,
         match_type: matchType,
         max_players: players,
@@ -382,10 +448,85 @@ export default function CreateGamePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Venue</p>
-                  <p className="text-xs text-slate-500">Select a location, then book if needed.</p>
+                  <p className="text-xs text-slate-500">Choose a preset venue or enter your own location.</p>
                 </div>
-                <span className="text-xs font-semibold text-[#1D9E75]">Selected: {selectedVenue}</span>
+                <span className="text-xs font-semibold text-[#1D9E75]">
+                  Selected: {venueMode === "custom" ? customAddress.trim() || "Custom address" : selectedVenue}
+                </span>
               </div>
+
+              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-2">
+                <button
+                  type="button"
+                  onClick={() => setVenueMode("preset")}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    venueMode === "preset" ? "bg-[#ECF8F2] text-[#1D9E75]" : "text-slate-600"
+                  }`}
+                >
+                  Pick a venue
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVenueMode("custom")}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    venueMode === "custom" ? "bg-[#ECF8F2] text-[#1D9E75]" : "text-slate-600"
+                  }`}
+                >
+                  Use my own location
+                </button>
+              </div>
+
+              {venueMode === "custom" ? (
+                <div className="rounded-[24px] border border-slate-200 bg-white p-4 space-y-3">
+                  <label className="block text-sm font-semibold text-slate-900" htmlFor="custom-address-input">
+                    Address
+                  </label>
+                  <input
+                    id="custom-address-input"
+                    type="text"
+                    value={customAddress}
+                    onChange={(event) => {
+                      setCustomAddress(event.target.value);
+                      if (customAddressGeocode.status !== "idle") {
+                        setCustomAddressGeocode({ status: "idle" });
+                      }
+                    }}
+                    onBlur={geocodeCustomAddress}
+                    placeholder="e.g. 12 Iffley Road, Oxford OX4 1EA"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                    style={{ fontSize: "16px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={geocodeCustomAddress}
+                    className="inline-flex rounded-full bg-[#1D9E75] px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
+                  >
+                    Find on map
+                  </button>
+
+                  {customAddressGeocode.status === "loading" ? (
+                    <p className="text-xs text-slate-500">Finding location...</p>
+                  ) : null}
+
+                  {customAddressGeocode.status === "error" ? (
+                    <p className="text-xs text-amber-700">
+                      Couldn&apos;t find that address — the game will still save, but it may not show on the map.
+                    </p>
+                  ) : null}
+
+                  {customAddressGeocode.status === "success" ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                      <VenueLeafletMap
+                        lat={customAddressGeocode.lat}
+                        lng={customAddressGeocode.lng}
+                        title={customAddress.trim() || "Custom address"}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {venueMode === "preset" ? (
               <div className="space-y-3">
                 {venues.map((item) => (
                   <button
@@ -408,8 +549,9 @@ export default function CreateGamePage() {
                   </button>
                 ))}
               </div>
+              ) : null}
 
-              {selectedVenueData?.bookingUrl && !isBooked ? (
+              {venueMode === "preset" && selectedVenueData?.bookingUrl && !isBooked ? (
                 <a
                   href={selectedVenueData.bookingUrl}
                   target="_blank"

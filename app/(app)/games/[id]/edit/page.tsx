@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
@@ -61,6 +62,9 @@ type GameRow = {
   start_time: string;
   duration: string | null;
   venue: string;
+  custom_address: string | null;
+  venue_lat: number | null;
+  venue_lng: number | null;
   pitch_cost: number;
   is_booked: boolean;
   booking_url: string | null;
@@ -68,6 +72,17 @@ type GameRow = {
   match_type: string | null;
   max_players: number;
 };
+
+type GeocodeState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "success"; lat: number; lng: number };
+
+const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
+  ssr: false,
+  loading: () => <p className="text-xs text-slate-500">Loading map...</p>,
+});
 
 function getDateOptions() {
   return Array.from({ length: 7 }).map((_, index) => {
@@ -95,6 +110,9 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
   const [duration, setDuration] = useState(durationOptions[1]);
   const [players, setPlayers] = useState(8);
   const [selectedVenue, setSelectedVenue] = useState(venues[0].name);
+  const [venueMode, setVenueMode] = useState<"preset" | "custom">("preset");
+  const [customAddress, setCustomAddress] = useState("");
+  const [customAddressGeocode, setCustomAddressGeocode] = useState<GeocodeState>({ status: "idle" });
   const [existingBookingUrl, setExistingBookingUrl] = useState<string | null>(null);
   const [pitchCost, setPitchCost] = useState(0);
   const [isBooked, setIsBooked] = useState(false);
@@ -124,6 +142,41 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
     ];
   }, [selectedVenue, existingBookingUrl]);
 
+  const geocodeCustomAddress = async () => {
+    const normalizedAddress = customAddress.trim();
+    if (!normalizedAddress) {
+      setCustomAddressGeocode({ status: "idle" });
+      return;
+    }
+
+    setCustomAddressGeocode({ status: "loading" });
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${normalizedAddress}, Oxford, UK`)}&format=json&limit=1`
+      );
+
+      if (!response.ok) {
+        setCustomAddressGeocode({ status: "error" });
+        return;
+      }
+
+      const result = (await response.json()) as Array<{ lat: string; lon: string }>;
+      if (!result[0]) {
+        setCustomAddressGeocode({ status: "error" });
+        return;
+      }
+
+      setCustomAddressGeocode({
+        status: "success",
+        lat: Number.parseFloat(result[0].lat),
+        lng: Number.parseFloat(result[0].lon),
+      });
+    } catch {
+      setCustomAddressGeocode({ status: "error" });
+    }
+  };
+
   useEffect(() => {
     const loadGame = async () => {
       const supabase = createSupabaseClient();
@@ -139,7 +192,7 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
 
       const { data: game, error } = await supabase
         .from("games")
-        .select("id, created_by, sport, date, start_time, duration, venue, pitch_cost, is_booked, booking_url, description, match_type, max_players")
+        .select("id, created_by, sport, date, start_time, duration, venue, custom_address, venue_lat, venue_lng, pitch_cost, is_booked, booking_url, description, match_type, max_players")
         .eq("id", id)
         .single();
 
@@ -163,7 +216,20 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
       setStartTime(gameRow.start_time || timeOptions[1]);
       setDuration(gameRow.duration || durationOptions[1]);
       setPlayers(gameRow.max_players || 8);
-      setSelectedVenue(gameRow.venue || venues[0].name);
+      if (gameRow.custom_address) {
+        setVenueMode("custom");
+        setCustomAddress(gameRow.custom_address);
+        if (gameRow.venue_lat !== null && gameRow.venue_lng !== null) {
+          setCustomAddressGeocode({ status: "success", lat: gameRow.venue_lat, lng: gameRow.venue_lng });
+        } else {
+          setCustomAddressGeocode({ status: "idle" });
+        }
+      } else {
+        setVenueMode("preset");
+        setSelectedVenue(gameRow.venue || venues[0].name);
+        setCustomAddress("");
+        setCustomAddressGeocode({ status: "idle" });
+      }
       setExistingBookingUrl(gameRow.booking_url ?? null);
       setPitchCost(gameRow.pitch_cost || 0);
       setIsBooked(Boolean(gameRow.is_booked));
@@ -182,6 +248,13 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
     setLoading(true);
     setErrorMessage("");
 
+    const normalizedCustomAddress = customAddress.trim();
+    if (venueMode === "custom" && !normalizedCustomAddress) {
+      setLoading(false);
+      setErrorMessage("Please enter an address for your custom location.");
+      return;
+    }
+
     const supabase = createSupabaseClient();
     const {
       data: { user },
@@ -194,6 +267,13 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
       return;
     }
 
+    const usingCustomAddress = venueMode === "custom";
+    const venueToSave = usingCustomAddress ? normalizedCustomAddress : selectedVenue;
+    const customLat =
+      usingCustomAddress && customAddressGeocode.status === "success" ? customAddressGeocode.lat : null;
+    const customLng =
+      usingCustomAddress && customAddressGeocode.status === "success" ? customAddressGeocode.lng : null;
+
     const { error: updateError } = await supabase
       .from("games")
       .update({
@@ -202,10 +282,13 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
         date: selectedDate,
         start_time: startTime,
         duration,
-        venue: selectedVenue,
+        venue: venueToSave,
+        custom_address: usingCustomAddress ? normalizedCustomAddress : null,
+        venue_lat: customLat,
+        venue_lng: customLng,
         pitch_cost: pitchCost,
         is_booked: isBooked,
-        booking_url: selectedVenueData?.bookingUrl || existingBookingUrl || null,
+        booking_url: usingCustomAddress ? null : selectedVenueData?.bookingUrl || existingBookingUrl || null,
         description,
         match_type: matchType,
         max_players: players,
@@ -374,32 +457,108 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Venue</p>
-                  <p className="text-xs text-slate-500">Select a location, then book if needed.</p>
+                  <p className="text-xs text-slate-500">Choose a preset venue or enter your own location.</p>
                 </div>
-                <span className="text-xs font-semibold text-[#1D9E75]">Selected: {selectedVenue}</span>
+                <span className="text-xs font-semibold text-[#1D9E75]">
+                  Selected: {venueMode === "custom" ? customAddress.trim() || "Custom address" : selectedVenue}
+                </span>
               </div>
-              <div className="space-y-3">
-                {venueOptions.map((item) => (
+
+              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-2">
+                <button
+                  type="button"
+                  onClick={() => setVenueMode("preset")}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    venueMode === "preset" ? "bg-[#ECF8F2] text-[#1D9E75]" : "text-slate-600"
+                  }`}
+                >
+                  Pick a venue
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVenueMode("custom")}
+                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                    venueMode === "custom" ? "bg-[#ECF8F2] text-[#1D9E75]" : "text-slate-600"
+                  }`}
+                >
+                  Use my own location
+                </button>
+              </div>
+
+              {venueMode === "custom" ? (
+                <div className="rounded-[24px] border border-slate-200 bg-white p-4 space-y-3">
+                  <label className="block text-sm font-semibold text-slate-900" htmlFor="custom-address-input">
+                    Address
+                  </label>
+                  <input
+                    id="custom-address-input"
+                    type="text"
+                    value={customAddress}
+                    onChange={(event) => {
+                      setCustomAddress(event.target.value);
+                      if (customAddressGeocode.status !== "idle") {
+                        setCustomAddressGeocode({ status: "idle" });
+                      }
+                    }}
+                    onBlur={geocodeCustomAddress}
+                    placeholder="e.g. 12 Iffley Road, Oxford OX4 1EA"
+                    className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
+                    style={{ fontSize: "16px" }}
+                  />
                   <button
-                    key={item.name}
                     type="button"
-                    onClick={() => setSelectedVenue(item.name)}
-                    className={`w-full rounded-[24px] border p-4 text-left transition ${
-                      selectedVenue === item.name
-                        ? "border-[#1D9E75] bg-[#ECF8F2]"
-                        : "border-slate-200 bg-white hover:border-slate-300"
-                    }`}
+                    onClick={geocodeCustomAddress}
+                    className="inline-flex rounded-full bg-[#1D9E75] px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">{item.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">{item.location}</p>
-                      </div>
-                      <span className="text-sm font-semibold text-[#1D9E75]">Book</span>
-                    </div>
+                    Find on map
                   </button>
-                ))}
-              </div>
+
+                  {customAddressGeocode.status === "loading" ? (
+                    <p className="text-xs text-slate-500">Finding location...</p>
+                  ) : null}
+
+                  {customAddressGeocode.status === "error" ? (
+                    <p className="text-xs text-amber-700">
+                      Couldn&apos;t find that address — the game will still save, but it may not show on the map.
+                    </p>
+                  ) : null}
+
+                  {customAddressGeocode.status === "success" ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                      <VenueLeafletMap
+                        lat={customAddressGeocode.lat}
+                        lng={customAddressGeocode.lng}
+                        title={customAddress.trim() || "Custom address"}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {venueMode === "preset" ? (
+                <div className="space-y-3">
+                  {venueOptions.map((item) => (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => setSelectedVenue(item.name)}
+                      className={`w-full rounded-[24px] border p-4 text-left transition ${
+                        selectedVenue === item.name
+                          ? "border-[#1D9E75] bg-[#ECF8F2]"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950">{item.name}</p>
+                          <p className="mt-1 text-xs text-slate-500">{item.location}</p>
+                        </div>
+                        <span className="text-sm font-semibold text-[#1D9E75]">Book</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-[24px] border border-slate-200 bg-white p-4 space-y-3">
