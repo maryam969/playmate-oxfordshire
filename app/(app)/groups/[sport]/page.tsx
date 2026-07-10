@@ -317,6 +317,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     const visibleGameIds = games
       .filter((game) => currentUserId !== null && (joinedGameIds.includes(game.id) || game.created_by === currentUserId))
       .map((game) => game.id);
+    const normalizedVisibleGameIdMap = new Map(visibleGameIds.map((gameId) => [gameId.trim().toLowerCase(), gameId]));
 
     if (!currentUserId || visibleGameIds.length === 0) {
       setGuestListByGameId({});
@@ -327,6 +328,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
     const loadGuestLists = async () => {
       const supabase = createSupabaseClient();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user || authData.user.id !== currentUserId) {
+        if (!isCancelled) {
+          setGuestListByGameId({});
+        }
+        return;
+      }
+
       const { data: playerRows, error: playersError } = await supabase
         .from("game_players")
         .select("game_id, user_id")
@@ -363,12 +372,18 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       });
 
       playerRows.forEach((row) => {
+        const normalizedGameId = row.game_id.trim().toLowerCase();
+        const matchedGameId = normalizedVisibleGameIdMap.get(normalizedGameId);
+        if (!matchedGameId) {
+          return;
+        }
+
         const profile = profileById[row.user_id];
         const firstName = (profile?.first_name ?? "").trim();
         const lastName = (profile?.last_name ?? "").trim();
         const displayName = `${firstName} ${lastName}`.trim() || firstName || "Player";
 
-        nextGuestListByGameId[row.game_id].push({
+        nextGuestListByGameId[matchedGameId].push({
           user_id: row.user_id,
           display_name: displayName,
           avatar_url: profile?.avatar_url ?? null,
