@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, CalendarPlus, Clock, MapPin, MoreVertical, Plus, Search } from "lucide-react";
+import { Calendar, CalendarPlus, Clock, Lock, MapPin, MoreVertical, Plus, Search } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { sendNotification } from "@/lib/notify";
 import { getSportIcon } from "@/lib/sport-icons";
@@ -44,7 +44,19 @@ type WaitlistRow = {
   user_name: string | null;
 };
 
+type GuestListMember = {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+};
+
 const joiningCutoffInMs = 24 * 60 * 60 * 1000;
+const guestAvatarColors = ["bg-violet-500", "bg-blue-500", "bg-orange-500", "bg-rose-500", "bg-cyan-500"];
+
+function getAvatarColorClass(seed: string): string {
+  const colorIndex = seed.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) % guestAvatarColors.length;
+  return guestAvatarColors[colorIndex];
+}
 
 const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-map"), {
   ssr: false,
@@ -69,6 +81,7 @@ export default function ExplorePage() {
   const [expandedDetailsGameId, setExpandedDetailsGameId] = useState<string | null>(null);
   const [openMenuGameId, setOpenMenuGameId] = useState<string | null>(null);
   const [geocodeByGameId, setGeocodeByGameId] = useState<Record<string, GeocodeState>>({});
+  const [guestListByGameId, setGuestListByGameId] = useState<Record<string, GuestListMember[]>>({});
   const [joinError, setJoinError] = useState("");
   const [now, setNow] = useState(() => Date.now());
 
@@ -216,6 +229,80 @@ export default function ExplorePage() {
       return matchesFilter && matchesSearch;
     });
   }, [games, selectedFilter, searchQuery]);
+
+  useEffect(() => {
+    const visibleGameIds = games
+      .filter((game) => currentUserId !== null && (joinedGameIds.includes(game.id) || game.created_by === currentUserId))
+      .map((game) => game.id);
+
+    if (!currentUserId || visibleGameIds.length === 0) {
+      setGuestListByGameId({});
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadGuestLists = async () => {
+      const supabase = createSupabaseClient();
+      const { data: playerRows, error: playersError } = await supabase
+        .from("game_players")
+        .select("game_id, user_id")
+        .in("game_id", visibleGameIds);
+
+      if (playersError || !playerRows) {
+        if (!isCancelled) {
+          setGuestListByGameId({});
+        }
+        return;
+      }
+
+      const userIds = [...new Set(playerRows.map((row) => row.user_id))];
+      const profileById: Record<string, { first_name: string | null; last_name: string | null; avatar_url: string | null }> = {};
+
+      if (userIds.length > 0) {
+        const { data: profileRows } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, avatar_url")
+          .in("id", userIds);
+
+        (profileRows ?? []).forEach((profile) => {
+          profileById[profile.id] = {
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            avatar_url: profile.avatar_url,
+          };
+        });
+      }
+
+      const nextGuestListByGameId: Record<string, GuestListMember[]> = {};
+      visibleGameIds.forEach((gameId) => {
+        nextGuestListByGameId[gameId] = [];
+      });
+
+      playerRows.forEach((row) => {
+        const profile = profileById[row.user_id];
+        const firstName = (profile?.first_name ?? "").trim();
+        const lastName = (profile?.last_name ?? "").trim();
+        const displayName = `${firstName} ${lastName}`.trim() || firstName || "Player";
+
+        nextGuestListByGameId[row.game_id].push({
+          user_id: row.user_id,
+          display_name: displayName,
+          avatar_url: profile?.avatar_url ?? null,
+        });
+      });
+
+      if (!isCancelled) {
+        setGuestListByGameId(nextGuestListByGameId);
+      }
+    };
+
+    loadGuestLists();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [games, joinedGameIds, currentUserId]);
 
   const handleJoin = async (game: GameRow) => {
     const supabase = createSupabaseClient();
@@ -621,6 +708,8 @@ export default function ExplorePage() {
               const full = game.current_players >= game.max_players;
               const waitlistCount = waitlistCounts[game.id] ?? 0;
               const waitlisted = waitlistedGameIds.includes(game.id);
+              const canSeeGuestList = joined || isHost;
+              const guestList = guestListByGameId[game.id] ?? [];
               const matchTypeLabel =
                 game.match_type === "Male Only"
                   ? "Male only"
@@ -874,6 +963,53 @@ export default function ExplorePage() {
                       </button>
                     )}
                   </div>
+
+                  {canSeeGuestList ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Who's going</p>
+                      {guestList.length > 0 ? (
+                        <div className="space-y-2">
+                          {guestList.map((guest) => {
+                            const avatarInitial = guest.display_name.charAt(0).toUpperCase() || "U";
+                            const avatarColor = getAvatarColorClass(guest.user_id);
+                            const isGuestHost = game.created_by === guest.user_id;
+                            const isCurrentUser = currentUserId === guest.user_id;
+                            return (
+                              <div key={`${game.id}-${guest.user_id}`} className="flex items-center gap-2.5">
+                                {guest.avatar_url ? (
+                                  <img
+                                    src={guest.avatar_url}
+                                    alt={guest.display_name}
+                                    className="h-9 w-9 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarColor} text-xs font-bold text-white`}>
+                                    {avatarInitial}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 text-sm text-slate-700">
+                                  <span className="font-medium">{guest.display_name}</span>
+                                  {isGuestHost ? (
+                                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-700">
+                                      Host
+                                    </span>
+                                  ) : null}
+                                  {isCurrentUser ? <span className="text-xs text-slate-400">(you)</span> : null}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400">No joined players yet.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                      <Lock size={14} />
+                      <span>Join to see who's going</span>
+                    </div>
+                  )}
 
                   {expandedGameId === game.id ? (
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
