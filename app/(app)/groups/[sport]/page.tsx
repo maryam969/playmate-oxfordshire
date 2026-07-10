@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createElement, use, useEffect, useRef, useState } from "react";
-import { Calendar, Clock, MapPin, MoreVertical } from "lucide-react";
+import { Calendar, Clock, MapPin, MoreVertical, Plus } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { sendNotification } from "@/lib/notify";
 import { getSportIcon } from "@/lib/sport-icons";
@@ -1077,11 +1077,22 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   );
                 })
               ) : (
-                <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-                  <p className="text-base font-semibold text-slate-900">No games yet for this sport — create one!</p>
-                  <Link href="/create-game" className="mt-3 inline-flex text-sm font-semibold text-[#1D9E75]">
-                    Create a game
-                  </Link>
+                <div className="flex flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+                  <div
+                    className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+                    style={{ animation: "oxBounce 1.6s ease-in-out infinite" }}
+                  >
+                    {createElement(sportHeaderIcon, { size: 30, "aria-hidden": true })}
+                  </div>
+                  <p className="text-base font-semibold text-slate-800">No games here yet</p>
+                  <p className="text-sm text-slate-500">Be the first to set up a {sportLabel} game for this group.</p>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/create-game?sport=${sport}`)}
+                    className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#1D9E75] px-5 py-2 text-sm font-semibold text-white"
+                  >
+                    <Plus size={16} /> Create a game
+                  </button>
                 </div>
               )}
               </div>

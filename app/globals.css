@@ -45,3 +45,15 @@ body {
     50% { transform: none; }
   }
 }
+
+@keyframes oxFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes oxFloat {
+    0%, 100% { transform: none; }
+    50% { transform: none; }
+  }
+}
