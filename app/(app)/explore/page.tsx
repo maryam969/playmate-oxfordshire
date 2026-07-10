@@ -84,6 +84,7 @@ export default function ExplorePage() {
   const [guestListByGameId, setGuestListByGameId] = useState<Record<string, GuestListMember[]>>({});
   const [joinError, setJoinError] = useState("");
   const [now, setNow] = useState(() => Date.now());
+  const [authResolved, setAuthResolved] = useState(false);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(Date.now()), 60000);
@@ -91,10 +92,17 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    const loadGames = async () => {
-      const supabase = createSupabaseClient();
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
+    const supabase = createSupabaseClient();
+    let isActive = true;
+    let lastHandledUserId: string | null | undefined = undefined;
+    setAuthResolved(false);
+
+    const loadGamesForUser = async (user: { id: string; email?: string | null } | null) => {
+      if (!isActive) {
+        return;
+      }
+
+      setLoading(true);
       setCurrentUserId(user?.id ?? null);
 
       if (user) {
@@ -110,6 +118,7 @@ export default function ExplorePage() {
         setCurrentUserName(resolvedName);
       } else {
         setCurrentUserName("");
+        setJoinedGameIds([]);
       }
 
       let joinedIds: string[] = [];
@@ -207,7 +216,30 @@ export default function ExplorePage() {
       setLoading(false);
     };
 
-    loadGames();
+    const syncFromSession = (session: { user: { id: string; email?: string | null } | null } | null) => {
+      const user = session?.user ?? null;
+      const userId = user?.id ?? null;
+      if (userId === lastHandledUserId) {
+        return;
+      }
+      lastHandledUserId = userId;
+      void loadGamesForUser(user);
+    };
+
+    const { data: authSubscriptionData } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthResolved(true);
+      syncFromSession(session as { user: { id: string; email?: string | null } | null } | null);
+    });
+
+    void supabase.auth.getSession().then(({ data }) => {
+      setAuthResolved(true);
+      syncFromSession(data.session as { user: { id: string; email?: string | null } | null } | null);
+    });
+
+    return () => {
+      isActive = false;
+      authSubscriptionData.subscription.unsubscribe();
+    };
   }, []);
 
   const filteredGames = useMemo(() => {
@@ -231,6 +263,10 @@ export default function ExplorePage() {
   }, [games, selectedFilter, searchQuery]);
 
   useEffect(() => {
+    if (!authResolved) {
+      return;
+    }
+
     const visibleGameIds = games
       .filter((game) => currentUserId !== null && (joinedGameIds.includes(game.id) || game.created_by === currentUserId))
       .map((game) => game.id);
@@ -245,8 +281,8 @@ export default function ExplorePage() {
 
     const loadGuestLists = async () => {
       const supabase = createSupabaseClient();
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData.user || authData.user.id !== currentUserId) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session?.user || sessionData.session.user.id !== currentUserId) {
         if (!isCancelled) {
           setGuestListByGameId({});
         }
@@ -317,7 +353,7 @@ export default function ExplorePage() {
     return () => {
       isCancelled = true;
     };
-  }, [games, joinedGameIds, currentUserId]);
+  }, [games, joinedGameIds, currentUserId, authResolved]);
 
   const handleJoin = async (game: GameRow) => {
     const supabase = createSupabaseClient();
@@ -346,6 +382,11 @@ export default function ExplorePage() {
     });
 
     if (joinError) {
+      if (joinError.code === "23505") {
+        setJoinedGameIds((current) => (current.includes(game.id) ? current : [...current, game.id]));
+        setJoiningGameId(null);
+        return;
+      }
       setJoinError(joinError.message);
       setJoiningGameId(null);
       return;

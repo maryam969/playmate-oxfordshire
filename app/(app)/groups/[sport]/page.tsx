@@ -96,6 +96,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [userAvatars, setUserAvatars] = useState<Record<string, string>>({})
   const [guestListByGameId, setGuestListByGameId] = useState<Record<string, GuestListMember[]>>({});
   const [now, setNow] = useState(() => Date.now());
+  const [authResolved, setAuthResolved] = useState(false);
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
   const sportHeaderIcon = getSportIcon(sport);
@@ -124,34 +125,38 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
   useEffect(() => {
     const supabase = createSupabaseClient();
+    let isActive = true;
+    let lastHandledUserId: string | null | undefined = undefined;
+    setAuthResolved(false);
 
-    const loadMessages = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id ?? null;
+    const loadMessages = async (user: { id: string; email?: string | null } | null) => {
+      const userId = user?.id ?? null;
 
-      if (userData.user) {
+      if (user) {
         setCurrentUserId(userId);
 
         const { data: profileData } = await supabase
           .from("profiles")
           .select("first_name, last_name")
-          .eq("id", userData.user.id)
+          .eq("id", user.id)
           .single()
 
         const fullName = profileData?.first_name
           ? `${profileData.first_name} ${profileData.last_name || ""}`.trim()
-          : userData.user.email?.split("@")[0] || "User"
+          : user.email?.split("@")[0] || "User"
 
         setCurrentUserName(fullName);
 
         const { data: myProfile } = await supabase
           .from("profiles")
           .select("avatar_url")
-          .eq("id", userData.user.id)
+          .eq("id", user.id)
           .single()
         if (myProfile?.avatar_url) {
-          setUserAvatars((prev) => ({ ...prev, [userData.user.id]: myProfile.avatar_url }))
+          setUserAvatars((prev) => ({ ...prev, [user.id]: myProfile.avatar_url }))
         }
+      } else {
+        setCurrentUserName("");
       }
 
       const { data, error } = await supabase
@@ -194,12 +199,9 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       }
     };
 
-    const loadGames = async () => {
-      const supabase = createSupabaseClient();
-      const { data: userData } = await supabase.auth.getUser();
-
-      if (userData.user) {
-        setCurrentUserId(userData.user.id);
+    const loadGames = async (user: { id: string; email?: string | null } | null) => {
+      if (user) {
+        setCurrentUserId(user.id);
       }
 
       const { data: gamesData, error: gamesError } = await supabase
@@ -211,11 +213,11 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
         setGames(gamesData as GameRow[]);
       }
 
-      if (userData.user) {
+      if (user) {
         const { data: joinedData } = await supabase
           .from("game_players")
           .select("game_id")
-          .eq("user_id", userData.user.id);
+          .eq("user_id", user.id);
 
         setJoinedGameIds((joinedData ?? []).map((row) => row.game_id));
 
@@ -229,7 +231,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           const userWaitlistIds: string[] = [];
           (waitlistData ?? []).forEach((row: WaitlistRow) => {
             counts[row.game_id] = (counts[row.game_id] ?? 0) + 1;
-            if (row.user_id === userData.user.id) {
+            if (row.user_id === user.id) {
               userWaitlistIds.push(row.game_id);
             }
           });
@@ -241,13 +243,37 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           setWaitlistedGameIds([]);
         }
       } else {
+        setJoinedGameIds([]);
         setWaitlistCounts({});
         setWaitlistedGameIds([]);
       }
     };
 
-    loadMessages();
-    loadGames();
+    const syncFromSession = async (session: { user: { id: string; email?: string | null } | null } | null) => {
+      const user = session?.user ?? null;
+      const userId = user?.id ?? null;
+      if (userId === lastHandledUserId) {
+        return;
+      }
+
+      lastHandledUserId = userId;
+      if (!isActive) {
+        return;
+      }
+
+      setCurrentUserId(userId);
+      await Promise.all([loadMessages(user), loadGames(user)]);
+    };
+
+    const { data: authSubscriptionData } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthResolved(true);
+      void syncFromSession(session as { user: { id: string; email?: string | null } | null } | null);
+    });
+
+    void supabase.auth.getSession().then(({ data }) => {
+      setAuthResolved(true);
+      void syncFromSession(data.session as { user: { id: string; email?: string | null } | null } | null);
+    });
 
     const channelName = `chat-${sport}`;
     const subscription = supabase
@@ -290,6 +316,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       .subscribe();
 
     return () => {
+      isActive = false;
+      authSubscriptionData.subscription.unsubscribe();
       try {
         subscription.unsubscribe();
       } catch (e) {
@@ -314,6 +342,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   }, [messages]);
 
   useEffect(() => {
+    if (!authResolved) {
+      return;
+    }
+
     const visibleGameIds = games
       .filter((game) => currentUserId !== null && (joinedGameIds.includes(game.id) || game.created_by === currentUserId))
       .map((game) => game.id);
@@ -328,8 +360,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
     const loadGuestLists = async () => {
       const supabase = createSupabaseClient();
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData.user || authData.user.id !== currentUserId) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session?.user || sessionData.session.user.id !== currentUserId) {
         if (!isCancelled) {
           setGuestListByGameId({});
         }
@@ -400,7 +432,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     return () => {
       isCancelled = true;
     };
-  }, [games, joinedGameIds, currentUserId]);
+  }, [games, joinedGameIds, currentUserId, authResolved]);
 
   const handleSend = async () => {
     const content = messageInput.trim();
@@ -474,6 +506,11 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     });
 
     if (joinError) {
+      if (joinError.code === "23505") {
+        setJoinedGameIds((current) => (current.includes(game.id) ? current : [...current, game.id]));
+        setJoiningGameId(null);
+        return;
+      }
       setJoinError(joinError.message);
       setJoiningGameId(null);
       return;
