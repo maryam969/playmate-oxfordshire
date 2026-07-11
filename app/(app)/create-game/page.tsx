@@ -12,41 +12,61 @@ const venues = [
     name: "Cutteslowe Park (Oxford)",
     location: "Oxford",
     bookingUrl: "https://pitchbooking.com/partners/occ",
+    sports: ["Football"],
   },
   {
     name: "Cowley Marsh (Oxford)",
     location: "Oxford",
     bookingUrl: "https://pitchbooking.com/partners/occ",
+    sports: ["Football"],
   },
   {
     name: "Court Place Farm (Oxford)",
     location: "Oxford",
     bookingUrl: "https://pitchbooking.com/partners/occ",
+    sports: ["Football"],
   },
   {
     name: "Barton Park 3G (Oxford)",
     location: "Oxford",
     bookingUrl: "https://pitchbooking.com/partners/occ",
+    sports: ["Football"],
   },
   {
     name: "Five Mile Drive Recreation Park (Oxford)",
     location: "Oxford",
     bookingUrl: "https://pitchbooking.com/partners/occ",
+    sports: ["Football"],
   },
   {
     name: "Donnington Recreation Ground (Oxford)",
     location: "Oxford",
     bookingUrl: "https://pitchbooking.com/partners/occ",
+    sports: ["Football"],
   },
   {
     name: "Ferry Sports Centre (Oxford)",
     location: "Oxford",
     bookingUrl: "https://www.better.org.uk/leisure-centre/oxford/ferry-leisure-centre",
+    sports: ["Football"],
   },
   {
     name: "Oxford City FC Community Arena (Oxford)",
     location: "Oxford",
     bookingUrl: "https://portal.sportskey.com/venues/oxford-city-f-c",
+    sports: ["Football"],
+  },
+  {
+    name: "Smash Padel Oxford",
+    location: "Oxford",
+    bookingUrl: "https://smashpadel.co/oxford/",
+    sports: ["Padel"],
+  },
+  {
+    name: "North Oxford Lawn Tennis Club (Padel)",
+    location: "Oxford",
+    bookingUrl: "https://noltc.co.uk/book-your-court",
+    sports: ["Padel"],
   },
 ];
 
@@ -110,9 +130,13 @@ export default function CreateGamePage() {
 
   const dateOptions = useMemo(() => getDateOptions(), []);
   const minimumSelectableDate = useMemo(() => getMinimumSelectableDate().toISOString().split("T")[0], []);
+  const visibleVenues = useMemo(
+    () => venues.filter((venue) => venue.sports.includes(sport)),
+    [sport]
+  );
   const selectedVenueData = useMemo(
-    () => venues.find((venue) => venue.name === selectedVenue) ?? null,
-    [selectedVenue]
+    () => visibleVenues.find((venue) => venue.name === selectedVenue) ?? null,
+    [selectedVenue, visibleVenues]
   );
   const gameStart = useMemo(() => new Date(`${selectedDate}T${startTime}`), [selectedDate, startTime]);
   const canPostGame = Number.isFinite(gameStart.getTime()) && gameStart.getTime() - now >= fortyEightHoursInMs;
@@ -121,6 +145,16 @@ export default function CreateGamePage() {
     const intervalId = window.setInterval(() => setNow(Date.now()), 60000);
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    if (visibleVenues.length === 0) {
+      return;
+    }
+
+    if (!visibleVenues.some((venue) => venue.name === selectedVenue)) {
+      setSelectedVenue(visibleVenues[0].name);
+    }
+  }, [selectedVenue, visibleVenues]);
 
   const geocodeCustomAddress = async () => {
     const normalizedAddress = customAddress.trim();
@@ -528,7 +562,7 @@ export default function CreateGamePage() {
 
               {venueMode === "preset" ? (
               <div className="space-y-3">
-                {venues.map((item) => (
+                {visibleVenues.map((item) => (
                   <button
                     key={item.name}
                     type="button"
