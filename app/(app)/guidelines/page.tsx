@@ -32,6 +32,30 @@ const sections = [
     ],
   },
   {
+    title: "Booking & payments",
+    intro: "Here's how booking a pitch and splitting the cost works — and what's coming next.",
+    subsections: [
+      {
+        title: "How it works today",
+        points: [
+          "The host books the pitch directly with the venue using the booking link shown on the game.",
+          "When the host sets a pitch cost, OxSporties automatically splits it between everyone who joins, so you always see your share.",
+          "For now, you pay your share to the host directly (cash or bank transfer) — money doesn't go through OxSporties yet.",
+        ],
+      },
+      {
+        title: "What's coming soon",
+        points: [
+          "In-app payments: pay your share securely when you join a game, so no one has to chase people for money.",
+          "Automatic host reimbursement: the host gets paid back automatically once the game fills.",
+          "Fairer no-shows: because everyone pays up front, people show up — and refunds are handled automatically if a game is cancelled.",
+          "Direct pitch booking: book and pay for the venue right inside OxSporties, without leaving the app.",
+        ],
+      },
+    ],
+    closing: "We're building this carefully to keep your money safe. Until it's ready, keep paying hosts directly and use the booking links to reserve pitches.",
+  },
+  {
     title: "Being a good OxSporties",
     points: [
       "Treat everyone with respect, on and off the pitch.",
@@ -78,15 +102,42 @@ export default function GuidelinesPage() {
         <div className="space-y-4">
           {sections.map((section) => (
             <section key={section.title} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-950">{section.title}</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-                {section.points.map((point) => (
-                  <li key={point} className="flex gap-3">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1D9E75]" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
+              <h2 className="text-base font-semibold text-slate-950">
+                {section.title}
+                {section.title === "Booking & payments" ? (
+                  <span className="ml-2 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
+                    Coming soon
+                  </span>
+                ) : null}
+              </h2>
+              {"intro" in section ? <p className="mt-2 text-sm leading-6 text-slate-600">{section.intro}</p> : null}
+              {"subsections" in section ? (
+                <div className="mt-4 space-y-4">
+                  {section.subsections.map((subsection) => (
+                    <div key={subsection.title}>
+                      <h3 className="text-sm font-semibold text-slate-950">{subsection.title}</h3>
+                      <ul className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
+                        {subsection.points.map((point) => (
+                          <li key={point} className="flex gap-3">
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1D9E75]" />
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+                  {section.points.map((point) => (
+                    <li key={point} className="flex gap-3">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1D9E75]" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {"closing" in section ? <p className="mt-4 text-sm leading-6 text-slate-600">{section.closing}</p> : null}
             </section>
           ))}
         </div>
