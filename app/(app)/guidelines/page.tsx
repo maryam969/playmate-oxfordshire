@@ -3,7 +3,21 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-const sections = [
+type GuidelineSubsection = {
+  title: string;
+  points: string[];
+};
+
+type GuidelineSection = {
+  title: string;
+  badge?: string;
+  intro?: string;
+  points?: string[];
+  subsections?: GuidelineSubsection[];
+  closing?: string;
+};
+
+const sections: GuidelineSection[] = [
   {
     title: "Hosting a game",
     points: [
@@ -111,7 +125,7 @@ export default function GuidelinesPage() {
                 ) : null}
               </h2>
               {"intro" in section ? <p className="mt-2 text-sm leading-6 text-slate-600">{section.intro}</p> : null}
-              {"subsections" in section ? (
+              {section.subsections && section.subsections.length > 0 ? (
                 <div className="mt-4 space-y-4">
                   {section.subsections.map((subsection) => (
                     <div key={subsection.title}>
@@ -129,12 +143,13 @@ export default function GuidelinesPage() {
                 </div>
               ) : (
                 <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-                  {section.points.map((point) => (
-                    <li key={point} className="flex gap-3">
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1D9E75]" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
+                  {section.points &&
+                    section.points.map((point) => (
+                      <li key={point} className="flex gap-3">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1D9E75]" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
                 </ul>
               )}
               {"closing" in section ? <p className="mt-4 text-sm leading-6 text-slate-600">{section.closing}</p> : null}
