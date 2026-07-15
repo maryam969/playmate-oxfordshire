@@ -70,6 +70,7 @@ type GameRow = {
   booking_url: string | null;
   description: string | null;
   match_type: string | null;
+  skill_level: string | null;
   max_players: number;
 };
 
@@ -105,6 +106,7 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
 
   const [sport, setSport] = useState("Football");
   const [matchType, setMatchType] = useState("Mixed");
+  const [skillLevel, setSkillLevel] = useState("All levels");
   const [selectedDate, setSelectedDate] = useState(getDateOptions()[0].value);
   const [startTime, setStartTime] = useState(timeOptions[1]);
   const [duration, setDuration] = useState(durationOptions[1]);
@@ -192,7 +194,7 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
 
       const { data: game, error } = await supabase
         .from("games")
-        .select("id, created_by, sport, date, start_time, duration, venue, custom_address, venue_lat, venue_lng, pitch_cost, is_booked, booking_url, description, match_type, max_players")
+        .select("id, created_by, sport, date, start_time, duration, venue, custom_address, venue_lat, venue_lng, pitch_cost, is_booked, booking_url, description, match_type, skill_level, max_players")
         .eq("id", id)
         .single();
 
@@ -212,6 +214,7 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
       setCanEdit(true);
       setSport(gameRow.sport || "Football");
       setMatchType(gameRow.match_type || "Mixed");
+      setSkillLevel(gameRow.skill_level?.trim() ? gameRow.skill_level : "All levels");
       setSelectedDate(gameRow.date || getDateOptions()[0].value);
       setStartTime(gameRow.start_time || timeOptions[1]);
       setDuration(gameRow.duration || durationOptions[1]);
@@ -291,6 +294,7 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
         booking_url: usingCustomAddress ? null : selectedVenueData?.bookingUrl || existingBookingUrl || null,
         description,
         match_type: matchType,
+        skill_level: skillLevel,
         max_players: players,
       })
       .eq("id", id)
@@ -362,6 +366,32 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
                       key={option}
                       type="button"
                       onClick={() => setMatchType(option)}
+                      className={`rounded-[12px] border px-2 py-3 text-center transition ${
+                        selected
+                          ? "border-[#1D9E75] bg-[#E1F5EE]"
+                          : "border-[#E5E7EB] bg-white"
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-slate-950">{option}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-slate-900">Skill level</p>
+                <p className="mt-1 text-[13px] text-slate-500">Who is this game for?</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {["All levels", "Beginner", "Intermediate", "Advanced"].map((option) => {
+                  const selected = skillLevel === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSkillLevel(option)}
                       className={`rounded-[12px] border px-2 py-3 text-center transition ${
                         selected
                           ? "border-[#1D9E75] bg-[#E1F5EE]"

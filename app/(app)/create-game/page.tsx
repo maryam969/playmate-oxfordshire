@@ -113,6 +113,7 @@ export default function CreateGamePage() {
   const router = useRouter();
   const [sport, setSport] = useState("Football");
   const [matchType, setMatchType] = useState("Mixed");
+  const [skillLevel, setSkillLevel] = useState("All levels");
   const [selectedDate, setSelectedDate] = useState(() => getDateOptions()[0].value);
   const [startTime, setStartTime] = useState(timeOptions[1]);
   const [duration, setDuration] = useState(durationOptions[1]);
@@ -264,6 +265,7 @@ export default function CreateGamePage() {
         booking_url: usingCustomAddress ? null : selectedVenueData?.bookingUrl ?? null,
         description,
         match_type: matchType,
+        skill_level: skillLevel,
         max_players: players,
         current_players: 1,
       })
@@ -385,6 +387,32 @@ export default function CreateGamePage() {
                       </div>
                       <p className="text-sm font-semibold text-slate-950">{option.label}</p>
                       <p className="mt-1 text-[11px] text-slate-500">{option.subtitle}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-slate-900">Skill level</p>
+                <p className="mt-1 text-[13px] text-slate-500">Who is this game for?</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {["All levels", "Beginner", "Intermediate", "Advanced"].map((option) => {
+                  const selected = skillLevel === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSkillLevel(option)}
+                      className={`rounded-[12px] border px-2 py-3 text-center transition ${
+                        selected
+                          ? "border-[#1D9E75] bg-[#E1F5EE]"
+                          : "border-[#E5E7EB] bg-white"
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-slate-950">{option}</p>
                     </button>
                   );
                 })}

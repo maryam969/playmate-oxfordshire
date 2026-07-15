@@ -16,6 +16,7 @@ type GameRow = {
   sport: string;
   title: string;
   match_type: string | null;
+  skill_level: string | null;
   date: string;
   start_time: string;
   venue: string;
@@ -134,7 +135,7 @@ export default function ExplorePage() {
 
       const result = await supabase
         .from("games")
-        .select("id, sport, title, match_type, date, start_time, venue, custom_address, venue_lat, venue_lng, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
+        .select("id, sport, title, match_type, skill_level, date, start_time, venue, custom_address, venue_lat, venue_lng, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
         .neq("status", "cancelled")
         .order("date", { ascending: true });
 
@@ -150,7 +151,7 @@ export default function ExplorePage() {
       if (user && joinedIds.length > 0) {
         const { data: cancelledJoinedGames } = await supabase
           .from("games")
-          .select("id, sport, title, match_type, date, start_time, venue, custom_address, venue_lat, venue_lng, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
+          .select("id, sport, title, match_type, skill_level, date, start_time, venue, custom_address, venue_lat, venue_lng, description, pitch_cost, is_booked, booking_url, current_players, max_players, creator_name, created_by, status")
           .eq("status", "cancelled")
           .in("id", joinedIds);
 
@@ -255,6 +256,7 @@ export default function ExplorePage() {
           game.venue,
           game.creator_name,
           game.match_type,
+          game.skill_level,
           game.description,
         ].some((field) => (field ?? "").toLowerCase().includes(normalizedQuery));
 
@@ -778,6 +780,15 @@ export default function ExplorePage() {
                   : game.match_type === "Female Only"
                   ? "rounded-full bg-pink-50 px-3 py-1 text-xs font-semibold text-pink-600"
                   : "rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
+              const skillLevel = game.skill_level?.trim() ? game.skill_level : "All levels";
+              const skillLevelClass =
+                skillLevel === "Beginner"
+                  ? "rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700"
+                  : skillLevel === "Intermediate"
+                  ? "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700"
+                  : skillLevel === "Advanced"
+                  ? "rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"
+                  : "rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700";
               return (
                 <div
                   key={game.id}
@@ -836,6 +847,7 @@ export default function ExplorePage() {
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
                       {spotsLeft} spots left
                     </span>
+                    <span className={skillLevelClass}>{skillLevel}</span>
                     <span className={matchTypeClass}>{matchTypeLabel}</span>
                     <span
                       className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${
