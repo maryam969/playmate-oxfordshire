@@ -3,60 +3,48 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createSupabaseClient } from "../../lib/supabase";
 
 export default function SignUpPage() {
-  const router = useRouter();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"error" | "success" | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setMessage("");
+    setMessageType(null);
     const supabase = createSupabaseClient();
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          full_name: `${firstName} ${lastName}`.trim(),
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+          emailRedirectTo: "https://oxsporties.com",
         },
-      },
-    });
-    setLoading(false);
+      });
 
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    if (data.user) {
-      const { error: profileInsertError } = await supabase.from("profiles").upsert(
-        {
-          id: data.user.id,
-          first_name: firstName,
-          last_name: lastName,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      );
-
-      if (profileInsertError) {
-        setMessage(profileInsertError.message);
+      if (error) {
+        setMessage(error.message);
+        setMessageType("error");
         return;
       }
-    }
 
-    router.push("/onboarding");
+      setMessage("Check your email to confirm your account, then sign in.");
+      setMessageType("success");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogle = async () => {
@@ -122,7 +110,9 @@ export default function SignUpPage() {
               />
             </label>
 
-            {message ? <p className="text-sm text-red-600">{message}</p> : null}
+            {message ? (
+              <p className={`text-sm ${messageType === "error" ? "text-red-600" : "text-emerald-700"}`}>{message}</p>
+            ) : null}
 
             <button
               type="submit"
