@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import Link from "next/link";
+import { FcGoogle } from "react-icons/fc";
 import { createSupabaseClient } from "../../lib/supabase";
 
 export default function SignUpPage() {
@@ -49,13 +50,27 @@ export default function SignUpPage() {
 
   const handleGoogle = async () => {
     setLoading(true);
+    setMessage("");
+    setMessageType(null);
     const supabase = createSupabaseClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    setLoading(false);
-    if (error) setMessage(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: "https://oxsporties.com/auth/callback?next=/dashboard",
+        },
+      });
+
+      if (error) {
+        setMessage(error.message);
+        setMessageType("error");
+        setLoading(false);
+      }
+    } catch {
+      setMessage("Google sign in failed. Please try again.");
+      setMessageType("error");
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,6 +81,26 @@ export default function SignUpPage() {
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#1D9E75]">Create account</p>
             <h1 className="mt-3 text-3xl font-semibold text-slate-950">Sign up for OxSporties</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">Start building your profile and join local sports games across Oxfordshire.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogle}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-3 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#1D9E75]" />
+            ) : (
+              <FcGoogle size={20} />
+            )}
+            <span>Continue with Google</span>
+          </button>
+
+          <div className="my-5 flex items-center gap-3 text-sm text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            <span>or</span>
+            <span className="h-px flex-1 bg-slate-200" />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -122,20 +157,6 @@ export default function SignUpPage() {
               {loading ? "Creating account..." : "Continue"}
             </button>
           </form>
-
-          <div className="my-5 flex items-center gap-3 text-sm text-slate-400">
-            <span className="h-px flex-1 bg-slate-200" />
-            <span>or</span>
-            <span className="h-px flex-1 bg-slate-200" />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogle}
-            className="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
-          >
-            Continue with Google
-          </button>
 
           <p className="mt-5 text-center text-xs leading-5 text-slate-500">
             By signing up you agree to our{' '}

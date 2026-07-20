@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FcGoogle } from "react-icons/fc";
 import { createSupabaseClient } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -12,6 +13,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const supabase = createSupabaseClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: "https://oxsporties.com/auth/callback?next=/dashboard",
+        },
+      });
+
+      if (error) {
+        setMessage(error.message);
+        setLoading(false);
+      }
+    } catch {
+      setMessage("Google sign in failed. Please try again.");
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -34,17 +58,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    const supabase = createSupabaseClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    setLoading(false);
-    if (error) setMessage(error.message);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12 sm:px-8">
@@ -53,6 +66,26 @@ export default function LoginPage() {
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-[#1D9E75]">Welcome back</p>
             <h1 className="mt-3 text-3xl font-semibold text-slate-950">Sign in to OxSporties</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">Access your games, messages, and Oxfordshire sports community.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={signInWithGoogle}
+            disabled={loading}
+            className="flex w-full items-center justify-center gap-3 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#1D9E75]" />
+            ) : (
+              <FcGoogle size={20} />
+            )}
+            <span>Continue with Google</span>
+          </button>
+
+          <div className="my-5 flex items-center gap-3 text-sm text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            <span>or</span>
+            <span className="h-px flex-1 bg-slate-200" />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -92,20 +125,6 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Continue"}
             </button>
           </form>
-
-          <div className="my-5 flex items-center gap-3 text-sm text-slate-400">
-            <span className="h-px flex-1 bg-slate-200" />
-            <span>or</span>
-            <span className="h-px flex-1 bg-slate-200" />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogle}
-            className="w-full rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
-          >
-            Continue with Google
-          </button>
 
           <p className="mt-6 text-center text-sm text-slate-600">
             Don’t have an account?{' '}
