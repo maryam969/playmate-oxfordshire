@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "845079901418",
+    "project_id": "oxsporties11",
+    "storage_bucket": "oxsporties11.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:845079901418:android:1fa486ea43c1ee9e8ed393",
+        "android_client_info": {
+          "package_name": "com.oxsporties.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD68cZ0KZx6Y22ClF7uUREQN13TkyWD0mg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
