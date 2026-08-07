@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# capacitor native build artifacts (keep the android/ and ios/ project files themselves)
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+ios/App/Pods/
+ios/App/build/
+ios/App/output/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+
