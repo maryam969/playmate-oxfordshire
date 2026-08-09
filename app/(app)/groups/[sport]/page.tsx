@@ -110,7 +110,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   useEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
-      viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1");
+      viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover");
     }
 
     document.body.style.overflow = "hidden";
