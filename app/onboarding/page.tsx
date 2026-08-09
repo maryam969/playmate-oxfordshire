@@ -32,7 +32,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-12 sm:px-8">
         <div className="rounded-[12px] border border-[#e5e7eb] bg-white p-6 shadow-sm shadow-slate-200/40">
           <div className="mb-6">
