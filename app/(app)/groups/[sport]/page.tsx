@@ -788,6 +788,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       className="flex flex-col bg-[#F0F2F5]"
       style={{
         height: "100dvh",
+        paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "calc(env(safe-area-inset-bottom) + 70px)",
       }}
     >
