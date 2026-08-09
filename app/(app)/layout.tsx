@@ -45,7 +45,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] text-[#1a1a1a]">
-      <div className={`mx-auto min-h-screen max-w-[480px] pt-[env(safe-area-inset-top)] ${isGroupChatDetail ? "" : "px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)]"}`}>
+      <div className={`mx-auto min-h-screen max-w-[480px] ${isGroupChatDetail ? "" : "px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)] pt-[env(safe-area-inset-top)]"}`}>
         <main className="min-h-[calc(100vh-56px-64px)] overflow-y-auto pb-8 pt-4">{children}</main>
       </div>
 
