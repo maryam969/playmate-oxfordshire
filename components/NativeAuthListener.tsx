@@ -30,7 +30,11 @@ export default function NativeAuthListener() {
       const { Browser } = await import("@capacitor/browser");
 
       const sub = await App.addListener("appUrlOpen", async ({ url }) => {
-        if (!url.startsWith("com.oxsporties.app://auth/callback")) return;
+        console.log("appUrlOpen fired with:", url);
+        if (!url.startsWith("com.oxsporties.app://auth/callback")) {
+          console.log("URL did not match auth callback, ignoring");
+          return;
+        }
 
         try {
           await Browser.close();
@@ -40,13 +44,16 @@ export default function NativeAuthListener() {
 
         const code = new URL(url).searchParams.get("code");
         const next = new URL(url).searchParams.get("next") ?? "/dashboard";
+        console.log("Extracted code:", code ? "present" : "MISSING");
 
         if (code) {
           const supabase = createSupabaseClient();
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (!error) {
+            console.log("Session exchange succeeded, redirecting to", next);
             router.replace(next);
           } else {
+            console.log("Session exchange failed:", error.message);
             router.replace("/login?error=auth");
           }
         }

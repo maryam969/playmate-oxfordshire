@@ -20,7 +20,7 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "com.oxsporties.app://auth/callback?next=/dashboard",
+        redirectTo: "com.oxsporties.app://auth/callback",
         skipBrowserRedirect: true,
       },
     });
@@ -29,6 +29,7 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
       return { error: error?.message ?? "Google sign in failed. Please try again." };
     }
 
+    console.log("Opening OAuth URL:", data.url);
     await Browser.open({ url: data.url, presentationStyle: "popover" });
     return { error: null };
   }
