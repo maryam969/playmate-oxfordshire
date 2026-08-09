@@ -318,9 +318,9 @@ export default function Home() {
           <div>
             <p className="mb-4 font-semibold text-white">Legal</p>
             <ul className="space-y-3 text-sm text-slate-400">
-              <li><Link href="#" className="transition hover:text-white">Terms</Link></li>
-              <li><Link href="#" className="transition hover:text-white">Privacy</Link></li>
-              <li><Link href="#" className="transition hover:text-white">Accessibility</Link></li>
+              <li><Link href="/terms" className="transition hover:text-white">Terms</Link></li>
+              <li><Link href="/privacy" className="transition hover:text-white">Privacy</Link></li>
+              <li><Link href="/accessibility" className="transition hover:text-white">Accessibility</Link></li>
             </ul>
           </div>
         </div>
