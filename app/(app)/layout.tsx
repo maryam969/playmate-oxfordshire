@@ -19,6 +19,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [groupsUnreadTotal, setGroupsUnreadTotal] = useState(0);
 
+  // Chat detail pages (/groups/football, /groups/tennis, etc.) have their
+  // own dedicated message input pinned to the bottom of the screen. The
+  // persistent tab bar below is position:fixed and floats over every page
+  // in this layout, so on chat pages it was overlapping (and on some
+  // devices, covering) that input instead of sitting cleanly below it.
+  const isGroupChatDetail = /^\/groups\/[^/]+$/.test(pathname ?? "");
+
   useEffect(() => {
     const supabase = createSupabaseClient();
 
@@ -38,52 +45,54 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] text-[#1a1a1a]">
-      <div className="mx-auto min-h-screen max-w-[480px] px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)] pt-[env(safe-area-inset-top)]">
+      <div className={`mx-auto min-h-screen max-w-[480px] pt-[env(safe-area-inset-top)] ${isGroupChatDetail ? "" : "px-4 pb-[calc(64px+env(safe-area-inset-bottom)+12px)]"}`}>
         <main className="min-h-[calc(100vh-56px-64px)] overflow-y-auto pb-8 pt-4">{children}</main>
       </div>
 
-      <nav className="fixed left-1/2 bottom-0 z-50 flex w-full max-w-[480px] -translate-x-1/2 items-center justify-between border-t border-slate-200 bg-white px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+10px)]">
-        {navItems.map((item) => {
-          const active = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(item.href));
-          if (item.special) {
+      {isGroupChatDetail ? null : (
+        <nav className="fixed left-1/2 bottom-0 z-50 flex w-full max-w-[480px] -translate-x-1/2 items-center justify-between border-t border-slate-200 bg-white px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+10px)]">
+          {navItems.map((item) => {
+            const active = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(item.href));
+            if (item.special) {
+              return (
+                <Link key={item.href} href={item.href} className="relative -mt-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#1D9E75] text-white shadow-lg shadow-[#1D9E75]/20 ring-4 ring-white transition hover:bg-emerald-600">
+                  <Plus size={24} strokeWidth={2} />
+                </Link>
+              );
+            }
+
+            const Icon =
+              item.href === "/dashboard"
+                ? Home
+                : item.href === "/groups/football"
+                ? MessageCircle
+                : item.href === "/explore"
+                ? Search
+                : User;
+            const isGroupsTab = item.href === "/groups/football";
+
             return (
-              <Link key={item.href} href={item.href} className="relative -mt-3 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#1D9E75] text-white shadow-lg shadow-[#1D9E75]/20 ring-4 ring-white transition hover:bg-emerald-600">
-                <Plus size={24} strokeWidth={2} />
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`inline-flex flex-col items-center justify-center gap-1 text-[11px] transition ${
+                  active ? "text-[#1D9E75]" : "text-slate-400"
+                }`}
+              >
+                <span className="relative inline-flex">
+                  <Icon size={22} strokeWidth={2} />
+                  {isGroupsTab && groupsUnreadTotal > 0 ? (
+                    <span className="absolute -right-3 -top-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold">
+                      {groupsUnreadTotal > 99 ? "99+" : groupsUnreadTotal}
+                    </span>
+                  ) : null}
+                </span>
+                <span>{item.label}</span>
               </Link>
             );
-          }
-
-          const Icon =
-            item.href === "/dashboard"
-              ? Home
-              : item.href === "/groups/football"
-              ? MessageCircle
-              : item.href === "/explore"
-              ? Search
-              : User;
-          const isGroupsTab = item.href === "/groups/football";
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`inline-flex flex-col items-center justify-center gap-1 text-[11px] transition ${
-                active ? "text-[#1D9E75]" : "text-slate-400"
-              }`}
-            >
-              <span className="relative inline-flex">
-                <Icon size={22} strokeWidth={2} />
-                {isGroupsTab && groupsUnreadTotal > 0 ? (
-                  <span className="absolute -right-3 -top-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold">
-                    {groupsUnreadTotal > 99 ? "99+" : groupsUnreadTotal}
-                  </span>
-                ) : null}
-              </span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+          })}
+        </nav>
+      )}
     </div>
   );
 }
