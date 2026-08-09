@@ -123,8 +123,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-bold text-slate-950">10. Contact</h2>
             <p className="mt-4">
               Questions about these Terms? Contact us at{" "}
-              <a href="mailto:hello@oxsporties.com" className="font-semibold text-[#1D9E75] hover:underline">
-                hello@oxsporties.com
+              <a href="mailto:info@oxsporties.com" className="font-semibold text-[#1D9E75] hover:underline">
+                info@oxsporties.com
               </a>.
             </p>
           </section>

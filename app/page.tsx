@@ -312,7 +312,7 @@ export default function Home() {
             <ul className="space-y-3 text-sm text-slate-400">
               <li><Link href="#" className="transition hover:text-white">Stories</Link></li>
               <li><Link href="#" className="transition hover:text-white">Events</Link></li>
-              <li><Link href="#" className="transition hover:text-white">Support</Link></li>
+              <li><Link href="/support" className="transition hover:text-white">Support</Link></li>
             </ul>
           </div>
           <div>

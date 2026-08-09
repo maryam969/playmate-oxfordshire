@@ -33,8 +33,8 @@ export default function AccessibilityPage() {
           </p>
           <p>
             Contact us at{" "}
-            <a href="mailto:hello@oxsporties.com" className="font-semibold text-[#1D9E75] hover:underline">
-              hello@oxsporties.com
+            <a href="mailto:info@oxsporties.com" className="font-semibold text-[#1D9E75] hover:underline">
+              info@oxsporties.com
             </a>{" "}
             with any accessibility concerns.
           </p>

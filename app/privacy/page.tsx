@@ -168,8 +168,8 @@ export default function PrivacyPolicyPage() {
             <p className="mt-4">
               If you have questions about this policy or want to exercise your data
               rights, contact us at{" "}
-              <a href="mailto:hello@oxsporties.com" className="font-semibold text-[#1D9E75] hover:underline">
-                hello@oxsporties.com
+              <a href="mailto:info@oxsporties.com" className="font-semibold text-[#1D9E75] hover:underline">
+                info@oxsporties.com
               </a>.
             </p>
           </section>
