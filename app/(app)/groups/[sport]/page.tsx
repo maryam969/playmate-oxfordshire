@@ -798,11 +798,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
               ←
             </Link>
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ECF8F2]">
-                {createElement(sportHeaderIcon, { size: 24, className: "text-[#1D9E75]", "aria-hidden": true })}
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#ECF8F2]">
+                {createElement(sportHeaderIcon, { size: 26, className: "text-[#1D9E75]", "aria-hidden": true })}
               </div>
-              <p className="text-base font-semibold text-slate-950">{sportLabel}</p>
+              <div className="flex flex-col items-start">
+                <p className="text-base font-bold text-slate-950 leading-tight">{sportLabel}</p>
+                <p className="text-xs text-slate-500 leading-tight">In Oxfordshire</p>
+              </div>
             </div>
             <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
               ⋯
