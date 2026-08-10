@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createElement, use, useEffect, useRef, useState } from "react";
-import { Calendar, Clock, Lock, MapPin, MoreVertical, Plus } from "lucide-react";
+import { createElement, use, useEffect, useMemo, useRef, useState } from "react";
+import { BarChart3, Calendar, Clock, Lock, MapPin, MoreVertical, Plus, X } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { sendNotification } from "@/lib/notify";
 import { getSportIcon } from "@/lib/sport-icons";
@@ -21,6 +21,36 @@ type ChatMessage = {
   reply_to_content?: string;
   reply_to_sender?: string;
 };
+
+type PollOption = {
+  id: string;
+  poll_id: string;
+  option_text: string;
+  position: number;
+};
+
+type PollVote = {
+  id: string;
+  poll_option_id: string;
+  user_id: string;
+  voter_name: string;
+  voted_at: string;
+};
+
+type Poll = {
+  id: string;
+  sport: string;
+  created_by: string;
+  creator_name: string;
+  question: string;
+  created_at: string;
+  options: PollOption[];
+  votes: PollVote[];
+};
+
+type FeedItem =
+  | { kind: "message"; data: ChatMessage; at: string }
+  | { kind: "poll"; data: Poll; at: string };
 
 type GameRow = {
   id: string;
@@ -74,10 +104,102 @@ const VenueLeafletMap = dynamic(() => import("@/components/maps/venue-leaflet-ma
   loading: () => <p className="text-xs text-slate-500">Loading map...</p>,
 });
 
+function PollCard({
+  poll,
+  currentUserId,
+  onToggleVote,
+  expanded,
+  onToggleExpanded,
+}: {
+  poll: Poll;
+  currentUserId: string | null;
+  onToggleVote: (poll: Poll, option: PollOption) => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+}) {
+  const totalVotes = poll.votes.length;
+  const formattedTime = new Date(poll.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  return (
+    <div className="mb-3 flex justify-start">
+      <div className="w-full max-w-[90%] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-1 flex items-center gap-2">
+          <span className="text-lg" aria-hidden="true">📊</span>
+          <p className="text-xs font-semibold text-slate-500">{poll.creator_name} started a poll</p>
+        </div>
+        <p className="mb-3 text-[15px] font-semibold text-slate-900">{poll.question}</p>
+        <div className="space-y-2">
+          {poll.options.map((option) => {
+            const optionVotes = poll.votes.filter((v) => v.poll_option_id === option.id);
+            const pct = totalVotes > 0 ? Math.round((optionVotes.length / totalVotes) * 100) : 0;
+            const iVoted = currentUserId ? optionVotes.some((v) => v.user_id === currentUserId) : false;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onToggleVote(poll, option)}
+                className={`relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left transition ${
+                  iVoted ? "border-[#1D9E75] bg-[#ECF8F2]" : "border-slate-200 bg-slate-50"
+                }`}
+              >
+                <div
+                  className="absolute inset-y-0 left-0 bg-[#1D9E75]/10"
+                  style={{ width: `${pct}%` }}
+                  aria-hidden="true"
+                />
+                <div className="relative flex items-center justify-between gap-2">
+                  <span className={`text-sm ${iVoted ? "font-semibold text-[#1D9E75]" : "text-slate-700"}`}>
+                    {iVoted ? "✓ " : ""}
+                    {option.option_text}
+                  </span>
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {optionVotes.length} · {pct}%
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-xs text-slate-400">
+            {totalVotes} vote{totalVotes === 1 ? "" : "s"} · {formattedTime}
+          </p>
+          {totalVotes > 0 && (
+            <button type="button" onClick={onToggleExpanded} className="text-xs font-semibold text-[#1D9E75]">
+              {expanded ? "Hide voters" : "See who voted"}
+            </button>
+          )}
+        </div>
+        {expanded && (
+          <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2">
+            {poll.options.map((option) => {
+              const optionVotes = poll.votes.filter((v) => v.poll_option_id === option.id);
+              if (optionVotes.length === 0) return null;
+              return (
+                <div key={option.id} className="text-xs">
+                  <span className="font-semibold text-slate-600">{option.option_text}: </span>
+                  <span className="text-slate-500">{optionVotes.map((v) => v.voter_name).join(", ")}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SportGroupPage({ params }: { params: Promise<{ sport: string }> }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [showPollComposer, setShowPollComposer] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptionInputs, setPollOptionInputs] = useState(["", ""]);
+  const [pollSubmitting, setPollSubmitting] = useState(false);
+  const [pollError, setPollError] = useState<string | null>(null);
+  const [expandedVotersFor, setExpandedVotersFor] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [sending, setSending] = useState(false);
@@ -102,6 +224,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const { sport } = use(params);
   const sportLabel = sport.charAt(0).toUpperCase() + sport.slice(1);
   const sportHeaderIcon = getSportIcon(sport);
+
+  const feedItems: FeedItem[] = useMemo(() => {
+    const items: FeedItem[] = [
+      ...messages.map((m) => ({ kind: "message" as const, data: m, at: m.created_at })),
+      ...polls.map((p) => ({ kind: "poll" as const, data: p, at: p.created_at })),
+    ];
+    return items.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  }, [messages, polls]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(Date.now()), 60000);
@@ -208,6 +338,44 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       }
     };
 
+    const loadPolls = async () => {
+      const { data: pollRows, error: pollFetchError } = await supabase
+        .from("polls")
+        .select("*")
+        .eq("sport", sport)
+        .order("created_at", { ascending: true });
+
+      if (pollFetchError || !pollRows || pollRows.length === 0) {
+        setPolls([]);
+        return;
+      }
+
+      const pollIds = pollRows.map((p: { id: string }) => p.id);
+
+      const { data: optionRows } = await supabase
+        .from("poll_options")
+        .select("*")
+        .in("poll_id", pollIds)
+        .order("position", { ascending: true });
+
+      const options = (optionRows || []) as PollOption[];
+      const optionIds = options.map((o) => o.id);
+
+      const { data: voteRows } = optionIds.length
+        ? await supabase.from("poll_votes").select("*").in("poll_option_id", optionIds)
+        : { data: [] as PollVote[] };
+
+      const votes = (voteRows || []) as PollVote[];
+
+      const assembled: Poll[] = pollRows.map((p: { id: string; sport: string; created_by: string; creator_name: string; question: string; created_at: string }) => ({
+        ...p,
+        options: options.filter((o) => o.poll_id === p.id),
+        votes: votes.filter((v) => options.some((o) => o.id === v.poll_option_id && o.poll_id === p.id)),
+      }));
+
+      setPolls(assembled);
+    };
+
     const loadGames = async (user: { id: string; email?: string | null } | null) => {
       if (user) {
         setCurrentUserId(user.id);
@@ -271,7 +439,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       }
 
       setCurrentUserId(userId);
-      await Promise.all([loadMessages(user), loadGames(user)]);
+      await Promise.all([loadMessages(user), loadGames(user), loadPolls()]);
     };
 
     const { data: authSubscriptionData } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -320,6 +488,32 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
               setUserAvatars(prev => ({ ...prev, [newMsg.user_id]: newProfile.avatar_url }))
             }
           }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "polls",
+          filter: `sport=eq.${sport}`,
+        },
+        () => {
+          void loadPolls();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "poll_votes" },
+        () => {
+          void loadPolls();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "poll_votes" },
+        () => {
+          void loadPolls();
         }
       )
       .subscribe();
@@ -492,6 +686,169 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     if (real) {
       // replace the temp message if still present
       setMessages((cur) => cur.map((m) => (m.id === tempId ? real : m)));
+    }
+  };
+
+  const handleAddPollOptionField = () => {
+    if (pollOptionInputs.length >= 6) return;
+    setPollOptionInputs((cur) => [...cur, ""]);
+  };
+
+  const handleRemovePollOptionField = (index: number) => {
+    setPollOptionInputs((cur) => cur.filter((_, i) => i !== index));
+  };
+
+  const handlePollOptionChange = (index: number, value: string) => {
+    setPollOptionInputs((cur) => cur.map((opt, i) => (i === index ? value : opt)));
+  };
+
+  const resetPollComposer = () => {
+    setPollQuestion("");
+    setPollOptionInputs(["", ""]);
+    setPollError(null);
+    setShowPollComposer(false);
+  };
+
+  const handleCreatePoll = async () => {
+    if (!currentUserId) return;
+
+    const question = pollQuestion.trim();
+    const cleanOptions = pollOptionInputs.map((o) => o.trim()).filter(Boolean);
+
+    if (!question) {
+      setPollError("Add a question for your poll.");
+      return;
+    }
+    if (cleanOptions.length < 2) {
+      setPollError("Add at least 2 options.");
+      return;
+    }
+
+    setPollSubmitting(true);
+    setPollError(null);
+
+    const supabase = createSupabaseClient();
+
+    const { data: pollRow, error: pollInsertError } = await supabase
+      .from("polls")
+      .insert({
+        sport,
+        created_by: currentUserId,
+        creator_name: currentUserName || "You",
+        question,
+      })
+      .select()
+      .single();
+
+    if (pollInsertError || !pollRow) {
+      setPollError("Couldn't create the poll. Try again.");
+      setPollSubmitting(false);
+      return;
+    }
+
+    const { error: optionsInsertError } = await supabase.from("poll_options").insert(
+      cleanOptions.map((option_text, index) => ({
+        poll_id: pollRow.id,
+        option_text,
+        position: index,
+      }))
+    );
+
+    setPollSubmitting(false);
+
+    if (optionsInsertError) {
+      setPollError("Poll created, but options failed to save. Try again.");
+      return;
+    }
+
+    resetPollComposer();
+
+    // Refresh immediately rather than waiting on the realtime event,
+    // since the creator's own INSERT sometimes doesn't echo back fast
+    // enough to feel instant.
+    const { data: pollRows } = await supabase
+      .from("polls")
+      .select("*")
+      .eq("sport", sport)
+      .order("created_at", { ascending: true });
+    if (pollRows) {
+      const pollIds = pollRows.map((p: { id: string }) => p.id);
+      const { data: optionRows } = await supabase
+        .from("poll_options")
+        .select("*")
+        .in("poll_id", pollIds)
+        .order("position", { ascending: true });
+      const options = (optionRows || []) as PollOption[];
+      const optionIds = options.map((o) => o.id);
+      const { data: voteRows } = optionIds.length
+        ? await supabase.from("poll_votes").select("*").in("poll_option_id", optionIds)
+        : { data: [] as PollVote[] };
+      const votes = (voteRows || []) as PollVote[];
+      setPolls(
+        pollRows.map((p: { id: string; sport: string; created_by: string; creator_name: string; question: string; created_at: string }) => ({
+          ...p,
+          options: options.filter((o) => o.poll_id === p.id),
+          votes: votes.filter((v) => options.some((o) => o.id === v.poll_option_id && o.poll_id === p.id)),
+        }))
+      );
+    }
+  };
+
+  const handleToggleVote = async (poll: Poll, option: PollOption) => {
+    if (!currentUserId) return;
+    const supabase = createSupabaseClient();
+    const existingVote = poll.votes.filter((v) => v.poll_option_id === option.id).find((v) => v.user_id === currentUserId);
+
+    if (existingVote) {
+      // Optimistic removal
+      setPolls((cur) =>
+        cur.map((p) =>
+          p.id === poll.id ? { ...p, votes: p.votes.filter((v) => v.id !== existingVote.id) } : p
+        )
+      );
+      const { error } = await supabase.from("poll_votes").delete().eq("id", existingVote.id);
+      if (error) {
+        // revert on failure
+        setPolls((cur) =>
+          cur.map((p) => (p.id === poll.id ? { ...p, votes: [...p.votes, existingVote] } : p))
+        );
+      }
+    } else {
+      const optimisticVote: PollVote = {
+        id: `temp-vote-${Date.now()}`,
+        poll_option_id: option.id,
+        user_id: currentUserId,
+        voter_name: currentUserName || "You",
+        voted_at: new Date().toISOString(),
+      };
+      setPolls((cur) =>
+        cur.map((p) => (p.id === poll.id ? { ...p, votes: [...p.votes, optimisticVote] } : p))
+      );
+      const { data, error } = await supabase
+        .from("poll_votes")
+        .insert({
+          poll_option_id: option.id,
+          user_id: currentUserId,
+          voter_name: currentUserName || "You",
+        })
+        .select()
+        .single();
+
+      if (error) {
+        setPolls((cur) =>
+          cur.map((p) =>
+            p.id === poll.id ? { ...p, votes: p.votes.filter((v) => v.id !== optimisticVote.id) } : p
+          )
+        );
+      } else if (data) {
+        setPolls((cur) =>
+          cur.map((p) =>
+            p.id === poll.id
+              ? { ...p, votes: p.votes.map((v) => (v.id === optimisticVote.id ? (data as PollVote) : v)) }
+              : p
+          )
+        );
+      }
     }
   };
 
@@ -844,8 +1201,8 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
         <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 pt-2">
           {activeTab === "chat" ? (
             <div className="h-full">
-              <div className={messages.length === 0 ? "flex h-full" : "space-y-4"}>
-              {messages.length === 0 ? (
+              <div className={feedItems.length === 0 ? "flex h-full" : "space-y-4"}>
+              {feedItems.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
                   <div
                     className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
@@ -856,7 +1213,23 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   <p className="text-base font-semibold text-slate-800">No messages yet</p>
                   <p className="text-sm text-slate-500">Be the first to say hello and get the game going.</p>
                 </div>
-              ) : messages.map((message) => {
+              ) : feedItems.map((item) => {
+                if (item.kind === "poll") {
+                  return (
+                    <PollCard
+                      key={item.data.id}
+                      poll={item.data}
+                      currentUserId={currentUserId}
+                      onToggleVote={handleToggleVote}
+                      expanded={expandedVotersFor === item.data.id}
+                      onToggleExpanded={() =>
+                        setExpandedVotersFor((cur) => (cur === item.data.id ? null : item.data.id))
+                      }
+                    />
+                  );
+                }
+
+                const message = item.data;
                 const isOwn = message.user_id === currentUserId;
                 const initials = (message.sender_name || "U").split(" ").map((part) => part[0]).join("").slice(0, 1).toUpperCase();
                 const avatarColors = ["bg-violet-500", "bg-blue-500", "bg-orange-500", "bg-rose-500", "bg-cyan-500"];
@@ -1323,6 +1696,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
             <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
               + Add game
             </Link>
+            <button
+              type="button"
+              onClick={() => setShowPollComposer(true)}
+              title="Start a poll"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#1D9E75] bg-white text-[#1D9E75] transition hover:bg-[#ECF8F0]"
+            >
+              <BarChart3 size={18} />
+            </button>
               <div className="flex flex-1 items-center gap-2 rounded-full bg-[#F0F2F5] px-3 py-2">
               <input
                 type="text"
@@ -1351,6 +1732,79 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           </div>
         </div>
       </div>
+
+      {showPollComposer && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 px-0" onClick={resetPollComposer}>
+          <div
+            className="w-full max-w-[480px] rounded-t-3xl bg-white p-5"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-base font-bold text-slate-950">New poll</p>
+              <button type="button" onClick={resetPollComposer} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Question</label>
+            <input
+              type="text"
+              value={pollQuestion}
+              onChange={(e) => setPollQuestion(e.target.value)}
+              placeholder="What's the question?"
+              className="mb-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[15px] text-slate-900 outline-none focus:border-[#1D9E75]"
+              style={{ fontSize: "16px" }}
+            />
+
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Options</label>
+            <div className="space-y-2">
+              {pollOptionInputs.map((option, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={option}
+                    onChange={(e) => handlePollOptionChange(index, e.target.value)}
+                    placeholder={`Option ${index + 1}`}
+                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[15px] text-slate-900 outline-none focus:border-[#1D9E75]"
+                    style={{ fontSize: "16px" }}
+                  />
+                  {pollOptionInputs.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePollOptionField(index)}
+                      className="shrink-0 text-slate-400 hover:text-slate-600"
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {pollOptionInputs.length < 6 && (
+              <button
+                type="button"
+                onClick={handleAddPollOptionField}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#1D9E75]"
+              >
+                <Plus size={16} /> Add option
+              </button>
+            )}
+
+            {pollError && <p className="mt-3 text-sm text-red-600">{pollError}</p>}
+
+            <button
+              type="button"
+              onClick={handleCreatePoll}
+              disabled={pollSubmitting}
+              className="mt-5 w-full rounded-full bg-[#1D9E75] py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {pollSubmitting ? "Creating…" : "Create poll"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
