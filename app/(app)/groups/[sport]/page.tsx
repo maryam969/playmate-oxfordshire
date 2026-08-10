@@ -690,6 +690,26 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
     }
   };
 
+  const handleDeleteMessage = async (message: ChatMessage) => {
+    if (!currentUserId || message.user_id !== currentUserId) return;
+    if (message.id.startsWith("temp-")) return;
+
+    const confirmed = window.confirm("Delete this message? This can't be undone.");
+    if (!confirmed) return;
+
+    // optimistic removal
+    setMessages((cur) => cur.filter((m) => m.id !== message.id));
+
+    const supabase = createSupabaseClient();
+    const { error } = await supabase.from("messages").delete().eq("id", message.id);
+
+    if (error) {
+      // put it back if the delete failed
+      setMessages((cur) => [...cur, message].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+      console.error("Failed to delete message:", error.message);
+    }
+  };
+
   const handleAddPollOptionField = () => {
     if (pollOptionInputs.length >= 6) return;
     setPollOptionInputs((cur) => [...cur, ""]);
@@ -1242,6 +1262,20 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                   <div key={message.id} className={`flex w-full mb-3 ${isOwn ? "justify-end" : "justify-start"}`}>
                     {isOwn ? (
                       <div className="flex items-end gap-1 max-w-[80%]">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMessage(message)}
+                          className="text-slate-400 hover:text-red-500 p-1 shrink-0"
+                          title="Delete"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                          </svg>
+                        </button>
                         <button
                           type="button"
                           onClick={() => setReplyingTo(message)}
