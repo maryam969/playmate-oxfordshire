@@ -5,6 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { FcGoogle } from "react-icons/fc";
 import { createSupabaseClient } from "../../lib/supabase";
+import { signInWithGoogle as nativeAwareGoogleSignIn } from "../../lib/native-auth";
 
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState("");
@@ -52,20 +53,16 @@ export default function SignUpPage() {
     setLoading(true);
     setMessage("");
     setMessageType(null);
-    const supabase = createSupabaseClient();
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: "https://oxsporties.com/auth/callback?next=/dashboard",
-        },
-      });
+      const { error } = await nativeAwareGoogleSignIn();
 
       if (error) {
-        setMessage(error.message);
+        setMessage(error);
         setMessageType("error");
         setLoading(false);
       }
+      // On success, the native flow finishes via NativeAuthListener;
+      // the web flow redirects the page itself, so no further action here.
     } catch {
       setMessage("Google sign in failed. Please try again.");
       setMessageType("error");
