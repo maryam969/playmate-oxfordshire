@@ -788,12 +788,12 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       className="flex flex-col bg-[#F0F2F5]"
       style={{
         height: "100dvh",
-        paddingTop: "env(safe-area-inset-top)",
+        paddingTop: "calc(env(safe-area-inset-top) + 10px)",
         paddingBottom: "calc(env(safe-area-inset-bottom) + 70px)",
       }}
     >
       <div className="flex h-full flex-col">
-        <div className="shrink-0 bg-white border-b border-slate-200">
+        <div className="shrink-0 mx-3 mb-2 rounded-3xl bg-white shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <Link href="/groups" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-700 transition hover:bg-slate-200">
               ←
