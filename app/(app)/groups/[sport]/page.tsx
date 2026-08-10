@@ -195,6 +195,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [polls, setPolls] = useState<Poll[]>([]);
   const [showPollComposer, setShowPollComposer] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptionInputs, setPollOptionInputs] = useState(["", ""]);
   const [pollSubmitting, setPollSubmitting] = useState(false);
@@ -1154,7 +1155,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       style={{
         height: "100dvh",
         paddingTop: "calc(env(safe-area-inset-top) + 10px)",
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingBottom: 0,
       }}
     >
       <div className="flex h-full flex-col">
@@ -1681,7 +1682,10 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           )}
         </div>
 
-        <div className="shrink-0 bg-white border-t border-slate-200 px-3 py-3 flex items-center gap-2">
+        <div
+          className="shrink-0 bg-white border-t border-slate-200 px-3 pt-3 flex items-center gap-2"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+        >
           <div className="w-full">
             {replyingTo ? (
               <div className="w-full bg-green-50 border-l-4 border-[#1D9E75] px-3 py-2 flex items-center justify-between">
@@ -1693,16 +1697,13 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
               </div>
             ) : null}
             <div className="w-full flex items-center gap-2">
-            <Link href="/create-game" className="inline-flex items-center rounded-full border border-[#1D9E75] bg-white px-4 py-2 text-sm font-semibold text-[#1D9E75] transition hover:bg-[#ECF8F0]">
-              + Add game
-            </Link>
             <button
               type="button"
-              onClick={() => setShowPollComposer(true)}
-              title="Start a poll"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#1D9E75] bg-white text-[#1D9E75] transition hover:bg-[#ECF8F0]"
+              onClick={() => setShowAttachMenu(true)}
+              title="Add to your message"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ECF8F2] text-[#1D9E75] transition hover:bg-[#DCF5E8]"
             >
-              <BarChart3 size={18} />
+              <Plus size={22} />
             </button>
               <div className="flex flex-1 items-center gap-2 rounded-full bg-[#F0F2F5] px-3 py-2">
               <input
@@ -1732,6 +1733,54 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
           </div>
         </div>
       </div>
+
+      {showAttachMenu && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40" onClick={() => setShowAttachMenu(false)}>
+          <div
+            className="w-full max-w-[480px] rounded-t-3xl bg-white p-5"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-base font-bold text-slate-950">Add to your message</p>
+              <button type="button" onClick={() => setShowAttachMenu(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <Link
+              href="/create-game"
+              onClick={() => setShowAttachMenu(false)}
+              className="flex items-center gap-3 rounded-2xl px-2 py-3 transition hover:bg-slate-50"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ECF8F2] text-[#1D9E75]">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-slate-950">Game</p>
+                <p className="text-xs text-slate-500">Create a game</p>
+              </div>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowAttachMenu(false);
+                setShowPollComposer(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-2xl px-2 py-3 text-left transition hover:bg-slate-50"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ECF8F2] text-[#1D9E75]">
+                <BarChart3 size={20} />
+              </div>
+              <div>
+                <p className="text-[15px] font-semibold text-slate-950">Poll</p>
+                <p className="text-xs text-slate-500">Create a poll</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {showPollComposer && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 px-0" onClick={resetPollComposer}>
