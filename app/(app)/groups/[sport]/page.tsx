@@ -1154,7 +1154,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       style={{
         height: "100dvh",
         paddingTop: "calc(env(safe-area-inset-top) + 10px)",
-        paddingBottom: "calc(env(safe-area-inset-bottom) + 70px)",
+        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       <div className="flex h-full flex-col">
