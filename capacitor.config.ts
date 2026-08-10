@@ -15,14 +15,14 @@ const config: CapacitorConfig = {
   },
   plugins: {
     Keyboard: {
-      // Without this, WKWebView doesn't shrink the page when the
-      // keyboard opens — it just overlays the keyboard on top of a
-      // full-height page, leaving a dead gap between the last visible
-      // content (e.g. a chat input bar) and the keyboard itself.
-      // 'body' tells the native layer to actually resize the page,
-      // so 100dvh-based layouts correctly shrink and the input bar
-      // ends up flush against the keyboard.
-      resize: 'body',
+      // 'body' only resizes the <body> element, not the WebView frame
+      // itself — CSS units like 100dvh are measured against the WebView
+      // frame, so with 'body' our layout never actually shrank and the
+      // input bar stayed pinned to the (now keyboard-covered) bottom of
+      // the old full height. 'native' resizes the real WebView frame,
+      // so 100dvh recalculates correctly and the input bar ends up
+      // right above the keyboard, fully visible.
+      resize: 'native',
       style: 'default',
     },
   },
