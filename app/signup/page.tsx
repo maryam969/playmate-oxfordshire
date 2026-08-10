@@ -112,6 +112,7 @@ export default function SignUpPage() {
                 onChange={(event) => setFirstName(event.target.value)}
                 required
                 className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                style={{ fontSize: "16px" }}
               />
             </label>
             <label className="block text-sm font-medium text-slate-700">
@@ -122,6 +123,7 @@ export default function SignUpPage() {
                 onChange={(event) => setLastName(event.target.value)}
                 required
                 className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                style={{ fontSize: "16px" }}
               />
             </label>
             <label className="block text-sm font-medium text-slate-700">
@@ -132,6 +134,7 @@ export default function SignUpPage() {
                 onChange={(event) => setEmail(event.target.value)}
                 required
                 className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                style={{ fontSize: "16px" }}
               />
             </label>
             <label className="block text-sm font-medium text-slate-700">
@@ -142,6 +145,7 @@ export default function SignUpPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 required
                 className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                style={{ fontSize: "16px" }}
               />
             </label>
 

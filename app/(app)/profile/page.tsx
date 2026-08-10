@@ -280,6 +280,7 @@ export default function ProfilePage() {
                     value={firstName}
                     onChange={(event) => setFirstName(event.target.value)}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                    style={{ fontSize: "16px" }}
                   />
                 </label>
                 <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -288,6 +289,7 @@ export default function ProfilePage() {
                     value={lastName}
                     onChange={(event) => setLastName(event.target.value)}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                    style={{ fontSize: "16px" }}
                   />
                 </label>
               </div>
@@ -297,6 +299,7 @@ export default function ProfilePage() {
                   value={email}
                   readOnly
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 outline-none"
+                  style={{ fontSize: "16px" }}
                 />
               </label>
               <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -305,6 +308,7 @@ export default function ProfilePage() {
                   value={location}
                   onChange={(event) => setLocation(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                  style={{ fontSize: "16px" }}
                 />
               </label>
             </div>

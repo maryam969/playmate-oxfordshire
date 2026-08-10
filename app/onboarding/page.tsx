@@ -51,6 +51,7 @@ export default function OnboardingPage() {
                   onChange={(event) => setFirstName(event.target.value)}
                   required
                   className="w-full rounded-[12px] border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                  style={{ fontSize: "16px" }}
                 />
               </label>
               <label className="space-y-2 text-sm font-medium text-slate-700">
@@ -61,6 +62,7 @@ export default function OnboardingPage() {
                   onChange={(event) => setLastName(event.target.value)}
                   required
                   className="w-full rounded-[12px] border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                  style={{ fontSize: "16px" }}
                 />
               </label>
             </div>
@@ -83,6 +85,7 @@ export default function OnboardingPage() {
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
                 className="w-full rounded-[12px] border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20"
+                  style={{ fontSize: "16px" }}
               />
             </label>
 
