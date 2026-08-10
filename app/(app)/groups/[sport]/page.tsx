@@ -8,6 +8,7 @@ import { Calendar, Clock, Lock, MapPin, MoreVertical, Plus } from "lucide-react"
 import { createSupabaseClient } from "@/lib/supabase";
 import { sendNotification } from "@/lib/notify";
 import { getSportIcon } from "@/lib/sport-icons";
+import { Capacitor } from "@capacitor/core";
 
 type ChatMessage = {
   id: string;
@@ -113,9 +114,16 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       viewport.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover");
     }
 
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.width = "100%";
+    // This scroll lock is a workaround for mobile browsers (prevents the
+    // page from rubber-banding/jumping when the keyboard opens on web).
+    // Inside the native app, it fights with WKWebView's own keyboard
+    // resize handling and leaves a gap between the input bar and the
+    // keyboard — so skip it there and let the native shell manage it.
+    if (!Capacitor.isNativePlatform()) {
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+    }
 
     return () => {
       document.body.style.overflow = "";
