@@ -1413,7 +1413,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                             </svg>
                           </button>
                           {openMessageMenuId === message.id && (
-                            <div className="absolute right-0 bottom-full mb-1 z-10 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                            <div className="absolute left-0 bottom-full mb-1 z-10 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                               <button
                                 type="button"
                                 onClick={() => {
