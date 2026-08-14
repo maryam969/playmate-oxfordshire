@@ -201,6 +201,14 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
   const [pollSubmitting, setPollSubmitting] = useState(false);
   const [pollError, setPollError] = useState<string | null>(null);
   const [expandedVotersFor, setExpandedVotersFor] = useState<string | null>(null);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
+  const [reportingMessage, setReportingMessage] = useState<ChatMessage | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportSuccess, setReportSuccess] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [sending, setSending] = useState(false);
@@ -228,11 +236,13 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
 
   const feedItems: FeedItem[] = useMemo(() => {
     const items: FeedItem[] = [
-      ...messages.map((m) => ({ kind: "message" as const, data: m, at: m.created_at })),
+      ...messages
+        .filter((m) => !blockedUserIds.includes(m.user_id))
+        .map((m) => ({ kind: "message" as const, data: m, at: m.created_at })),
       ...polls.map((p) => ({ kind: "poll" as const, data: p, at: p.created_at })),
     ];
     return items.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
-  }, [messages, polls]);
+  }, [messages, polls, blockedUserIds]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(Date.now()), 60000);
@@ -377,6 +387,15 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       setPolls(assembled);
     };
 
+    const loadBlockedUsers = async (userId: string | null) => {
+      if (!userId) {
+        setBlockedUserIds([]);
+        return;
+      }
+      const { data } = await supabase.from("blocked_users").select("blocked_id").eq("blocker_id", userId);
+      setBlockedUserIds((data || []).map((row: { blocked_id: string }) => row.blocked_id));
+    };
+
     const loadGames = async (user: { id: string; email?: string | null } | null) => {
       if (user) {
         setCurrentUserId(user.id);
@@ -440,7 +459,7 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       }
 
       setCurrentUserId(userId);
-      await Promise.all([loadMessages(user), loadGames(user), loadPolls()]);
+      await Promise.all([loadMessages(user), loadGames(user), loadPolls(), loadBlockedUsers(user?.id ?? null)]);
     };
 
     const { data: authSubscriptionData } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -707,6 +726,66 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
       // put it back if the delete failed
       setMessages((cur) => [...cur, message].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
       console.error("Failed to delete message:", error.message);
+    }
+  };
+
+  const handleSubmitReport = async () => {
+    if (!currentUserId || !reportingMessage) return;
+    if (!reportReason) {
+      setReportError("Please choose a reason.");
+      return;
+    }
+
+    setReportSubmitting(true);
+    setReportError(null);
+
+    const supabase = createSupabaseClient();
+    const { error } = await supabase.from("reports").insert({
+      reporter_id: currentUserId,
+      reported_user_id: reportingMessage.user_id,
+      reported_message_id: reportingMessage.id.startsWith("temp-") ? null : reportingMessage.id,
+      sport,
+      reason: reportReason,
+      details: reportDetails.trim() || null,
+    });
+
+    setReportSubmitting(false);
+
+    if (error) {
+      setReportError("Couldn't submit the report. Try again.");
+      return;
+    }
+
+    setReportSuccess(true);
+    setTimeout(() => {
+      setReportingMessage(null);
+      setReportReason("");
+      setReportDetails("");
+      setReportSuccess(false);
+    }, 1500);
+  };
+
+  const handleBlockUser = async (message: ChatMessage) => {
+    if (!currentUserId) return;
+    const confirmed = window.confirm(
+      `Block ${message.sender_name}? You won't see their messages anymore in any group chat.`
+    );
+    if (!confirmed) return;
+
+    setOpenMessageMenuId(null);
+    setBlockedUserIds((cur) => [...cur, message.user_id]);
+
+    const supabase = createSupabaseClient();
+    const { error } = await supabase.from("blocked_users").insert({
+      blocker_id: currentUserId,
+      blocked_id: message.user_id,
+    });
+
+    if (error) {
+      // revert on failure (unless it just already existed)
+      if (!error.message?.includes("duplicate")) {
+        setBlockedUserIds((cur) => cur.filter((id) => id !== message.user_id));
+      }
     }
   };
 
@@ -1320,6 +1399,41 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                             <p className="mt-1 text-[10px] text-slate-400">{formattedTime}</p>
                           </div>
                         </div>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setOpenMessageMenuId((cur) => (cur === message.id ? null : message.id))}
+                            className="text-slate-400 hover:text-slate-600 p-1 shrink-0 mb-1"
+                            title="More"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="5" cy="12" r="2" />
+                              <circle cx="12" cy="12" r="2" />
+                              <circle cx="19" cy="12" r="2" />
+                            </svg>
+                          </button>
+                          {openMessageMenuId === message.id && (
+                            <div className="absolute right-0 bottom-full mb-1 z-10 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMessageMenuId(null);
+                                  setReportingMessage(message);
+                                }}
+                                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                              >
+                                Report
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleBlockUser(message)}
+                                className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                              >
+                                Block user
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         <button
                           type="button"
                           onClick={() => setReplyingTo(message)}
@@ -1812,6 +1926,93 @@ export default function SportGroupPage({ params }: { params: Promise<{ sport: st
                 <p className="text-xs text-slate-500">Create a poll</p>
               </div>
             </button>
+          </div>
+        </div>
+      )}
+
+      {reportingMessage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40"
+          onClick={() => {
+            setReportingMessage(null);
+            setReportReason("");
+            setReportDetails("");
+            setReportError(null);
+          }}
+        >
+          <div
+            className="w-full max-w-[480px] rounded-t-3xl bg-white p-5"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {reportSuccess ? (
+              <div className="py-6 text-center">
+                <p className="text-base font-bold text-slate-950">Report submitted</p>
+                <p className="mt-1 text-sm text-slate-500">Thanks for letting us know. We'll take a look.</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-base font-bold text-slate-950">Report {reportingMessage.sender_name}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportingMessage(null);
+                      setReportReason("");
+                      setReportDetails("");
+                      setReportError(null);
+                    }}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="mb-4 rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">{reportingMessage.sender_name}</p>
+                  <p className="mt-0.5 text-sm text-slate-700 line-clamp-3">{reportingMessage.content}</p>
+                </div>
+
+                <label className="mb-1 block text-xs font-semibold text-slate-500">Reason</label>
+                <div className="mb-4 space-y-2">
+                  {["Harassment or bullying", "Spam", "Inappropriate content", "Fake or impersonation", "Other"].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setReportReason(option)}
+                      className={`w-full rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                        reportReason === option
+                          ? "border-[#1D9E75] bg-[#ECF8F2] font-semibold text-[#1D9E75]"
+                          : "border-slate-200 bg-white text-slate-700"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="mb-1 block text-xs font-semibold text-slate-500">Additional details (optional)</label>
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Anything else we should know?"
+                  rows={3}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[15px] text-slate-900 outline-none focus:border-[#1D9E75]"
+                  style={{ fontSize: "16px" }}
+                />
+
+                {reportError && <p className="mt-3 text-sm text-red-600">{reportError}</p>}
+
+                <button
+                  type="button"
+                  onClick={handleSubmitReport}
+                  disabled={reportSubmitting || !reportReason}
+                  className="mt-5 w-full rounded-full bg-[#1D9E75] py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {reportSubmitting ? "Submitting…" : "Submit report"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
