@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, CalendarPlus, Clock, Lock, MapPin, MoreVertical, Plus, Search } from "lucide-react";
+import { Calendar, CalendarPlus, Clock, Lock, MapPin, MoreVertical, Plus, Search, Share2 } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
 import { sendNotification } from "@/lib/notify";
 import { getSportIcon } from "@/lib/sport-icons";
@@ -72,6 +72,7 @@ export default function ExplorePage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserName, setCurrentUserName] = useState("");
   const [joinedGameIds, setJoinedGameIds] = useState<string[]>([]);
+  const [copiedGameId, setCopiedGameId] = useState<string | null>(null);
   const [waitlistedGameIds, setWaitlistedGameIds] = useState<string[]>([]);
   const [waitlistCounts, setWaitlistCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -356,6 +357,27 @@ export default function ExplorePage() {
       isCancelled = true;
     };
   }, [games, joinedGameIds, currentUserId, authResolved]);
+
+  const handleShareGame = async (game: GameRow) => {
+    const url = `https://oxsporties.com/games/${game.id}`;
+    const shareData = {
+      title: `${game.title} — OxSporties`,
+      text: `Join this ${game.sport} game on OxSporties!`,
+      url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // user cancelled, do nothing
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopiedGameId(game.id);
+      setTimeout(() => setCopiedGameId((cur) => (cur === game.id ? null : cur)), 2000);
+    }
+  };
 
   const handleJoin = async (game: GameRow) => {
     const supabase = createSupabaseClient();
@@ -806,7 +828,16 @@ export default function ExplorePage() {
                         <p className="text-xs text-slate-500">{game.sport}</p>
                       </div>
                     </div>
-                    <div className="shrink-0">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleShareGame(game)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm"
+                        aria-label="Share game"
+                        title={copiedGameId === game.id ? "Link copied!" : "Share"}
+                      >
+                        <Share2 size={15} />
+                      </button>
                       {isHost && !isCancelled ? (
                         <div className="relative z-10">
                           <button
