@@ -602,7 +602,19 @@ export default function CreateGamePage() {
                         <p className="text-sm font-semibold text-slate-950">{item.name}</p>
                         <p className="mt-1 text-xs text-slate-500">{item.location}</p>
                       </div>
-                      <span className="text-sm font-semibold text-[#1D9E75]">Book</span>
+                      {item.bookingUrl ? (
+                        <a
+                          href={item.bookingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-sm font-semibold text-[#1D9E75] underline decoration-[#1D9E75]/40 underline-offset-2 hover:decoration-[#1D9E75]"
+                        >
+                          Book →
+                        </a>
+                      ) : (
+                        <span className="text-sm font-semibold text-[#1D9E75]">Book</span>
+                      )}
                     </div>
                   </button>
                 ))}
