@@ -51,7 +51,7 @@ const venues = [
   },
 ];
 
-const timeOptions = ["09:00", "10:00", "11:00", "12:00", "14:00", "16:00", "18:00"];
+
 const durationOptions = ["45 min", "60 min", "90 min", "120 min"];
 
 type GameRow = {
@@ -108,7 +108,7 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
   const [matchType, setMatchType] = useState("Mixed");
   const [skillLevel, setSkillLevel] = useState("All levels");
   const [selectedDate, setSelectedDate] = useState(getDateOptions()[0].value);
-  const [startTime, setStartTime] = useState(timeOptions[1]);
+  const [startTime, setStartTime] = useState("10:00");
   const [duration, setDuration] = useState(durationOptions[1]);
   const [players, setPlayers] = useState(8);
   const [selectedVenue, setSelectedVenue] = useState(venues[0].name);
@@ -216,7 +216,7 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
       setMatchType(gameRow.match_type || "Mixed");
       setSkillLevel(gameRow.skill_level?.trim() ? gameRow.skill_level : "All levels");
       setSelectedDate(gameRow.date || getDateOptions()[0].value);
-      setStartTime(gameRow.start_time || timeOptions[1]);
+      setStartTime(gameRow.start_time || "10:00");
       setDuration(gameRow.duration || durationOptions[1]);
       setPlayers(gameRow.max_players || 8);
       if (gameRow.custom_address) {
@@ -429,17 +429,13 @@ export default function EditGamePage({ params }: { params: Promise<{ id: string 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
                 <span className="mb-2 block font-semibold">Start time</span>
-                <select
+                <input
+                  type="time"
                   value={startTime}
                   onChange={(event) => setStartTime(event.target.value)}
                   className="mt-1 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none"
-                >
-                  {timeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  style={{ fontSize: "16px" }}
+                />
               </label>
               <label className="rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
                 <span className="mb-2 block font-semibold">Duration</span>
