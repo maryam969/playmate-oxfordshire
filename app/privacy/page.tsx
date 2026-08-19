@@ -135,7 +135,14 @@ export default function PrivacyPolicyPage() {
             <ul className="mt-4 list-disc space-y-2 pl-5">
               <li>You can update your profile information at any time from within the app.</li>
               <li>You can disable push notifications from your device's system settings, or within the app.</li>
-              <li>You can request a copy of your data, or request deletion of your account and associated data, by contacting us using the details below.</li>
+              <li>
+                You can request a copy of your data, or request deletion of your account and associated data
+                — see our{" "}
+                <Link href="/delete-account" className="font-semibold text-[#1D9E75] hover:underline">
+                  account deletion page
+                </Link>{" "}
+                for instructions.
+              </li>
               <li>If you are in the UK or EU, you have rights under GDPR/UK GDPR, including the right to access, correct, or erase your personal data.</li>
             </ul>
           </section>

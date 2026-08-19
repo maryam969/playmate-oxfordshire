@@ -313,6 +313,7 @@ export default function Home() {
               <li><Link href="#" className="transition hover:text-white">Stories</Link></li>
               <li><Link href="#" className="transition hover:text-white">Events</Link></li>
               <li><Link href="/support" className="transition hover:text-white">Support</Link></li>
+              <li><Link href="/delete-account" className="transition hover:text-white">Delete Account</Link></li>
             </ul>
           </div>
           <div>
