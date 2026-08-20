@@ -53,3 +53,9 @@ ios/App/App.xcworkspace/xcuserdata/
 ios/App/App.xcodeproj/xcuserdata/
 ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
 
+# signing keys -- NEVER commit these, they must stay local-only
+*.jks
+*.keystore
+android/app/*.jks
+android/keystore.properties
+
